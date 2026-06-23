@@ -29,7 +29,7 @@ function getSpecs(p: Property): string {
 }
 
 export default function PropertyCard({ property }: { property: Property }) {
-  const img = property.imagens?.[0]?.link_thumb ?? property.imagens?.[0]?.link ?? ''
+  const img = property.imagens?.[0]?.link ?? ''
   const contratoLabel = getContrato(property)
   const tipoBairro = [property.tipo, property.endereco_bairro].filter(Boolean).join(' · ').toUpperCase()
   const preco = getPreco(property)
