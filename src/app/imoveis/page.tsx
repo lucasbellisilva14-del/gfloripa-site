@@ -2,6 +2,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { getProperties, formatPrice, getMainImage, type Property } from '@/lib/jetimob'
 
+const PAGE_SIZE = 24
+
 function PropertyCard({ property }: { property: Property }) {
   const img = getMainImage(property)
   const preco = property.contrato === 'Compra'
@@ -43,13 +45,68 @@ function PropertyCard({ property }: { property: Property }) {
   )
 }
 
-export default async function ImoveisPage() {
+function Pagination({ currentPage, totalPages }: { currentPage: number; totalPages: number }) {
+  const pages = []
+  const start = Math.max(1, currentPage - 2)
+  const end = Math.min(totalPages, currentPage + 2)
+
+  for (let i = start; i <= end; i++) pages.push(i)
+
+  return (
+    <div className="flex items-center justify-center gap-2 mt-12">
+      {currentPage > 1 && (
+        <Link href={`/imoveis?page=${currentPage - 1}`} className="px-4 py-2 rounded-lg border border-zinc-200 bg-white text-sm text-zinc-700 hover:bg-zinc-50">
+          ← Anterior
+        </Link>
+      )}
+      {start > 1 && (
+        <>
+          <Link href="/imoveis?page=1" className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm text-zinc-700 hover:bg-zinc-50">1</Link>
+          {start > 2 && <span className="text-zinc-400 text-sm">…</span>}
+        </>
+      )}
+      {pages.map((p) => (
+        <Link
+          key={p}
+          href={`/imoveis?page=${p}`}
+          className={`px-3 py-2 rounded-lg border text-sm ${p === currentPage ? 'bg-zinc-900 text-white border-zinc-900' : 'bg-white text-zinc-700 border-zinc-200 hover:bg-zinc-50'}`}
+        >
+          {p}
+        </Link>
+      ))}
+      {end < totalPages && (
+        <>
+          {end < totalPages - 1 && <span className="text-zinc-400 text-sm">…</span>}
+          <Link href={`/imoveis?page=${totalPages}`} className="px-3 py-2 rounded-lg border border-zinc-200 bg-white text-sm text-zinc-700 hover:bg-zinc-50">{totalPages}</Link>
+        </>
+      )}
+      {currentPage < totalPages && (
+        <Link href={`/imoveis?page=${currentPage + 1}`} className="px-4 py-2 rounded-lg border border-zinc-200 bg-white text-sm text-zinc-700 hover:bg-zinc-50">
+          Próxima →
+        </Link>
+      )}
+    </div>
+  )
+}
+
+export default async function ImoveisPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>
+}) {
+  const { page: pageParam } = await searchParams
+  const currentPage = Math.max(1, parseInt(pageParam ?? '1', 10))
+
   let properties: Property[] = []
+  let totalPages = 1
+  let total = 0
   let error = false
 
   try {
-    const data = await getProperties({ pageSize: 24 })
+    const data = await getProperties({ page: currentPage, pageSize: PAGE_SIZE })
     properties = data.data ?? []
+    totalPages = data.totalPages ?? 1
+    total = data.total ?? 0
   } catch {
     error = true
   }
@@ -60,8 +117,8 @@ export default async function ImoveisPage() {
         <div className="mb-8">
           <Link href="/" className="text-sm text-zinc-500 hover:text-zinc-700">← Início</Link>
           <h1 className="mt-4 text-3xl font-bold text-zinc-900">Imóveis disponíveis</h1>
-          {!error && properties.length > 0 && (
-            <p className="mt-1 text-zinc-500">{properties.length} imóvel{properties.length !== 1 ? 's' : ''} encontrado{properties.length !== 1 ? 's' : ''}</p>
+          {!error && total > 0 && (
+            <p className="mt-1 text-zinc-500">{total} imóveis encontrados</p>
           )}
         </div>
 
@@ -78,11 +135,14 @@ export default async function ImoveisPage() {
         )}
 
         {!error && properties.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {properties.map((property) => (
-              <PropertyCard key={property.codigo} property={property} />
-            ))}
-          </div>
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {properties.map((property) => (
+                <PropertyCard key={property.codigo} property={property} />
+              ))}
+            </div>
+            <Pagination currentPage={currentPage} totalPages={totalPages} />
+          </>
         )}
       </div>
     </main>
