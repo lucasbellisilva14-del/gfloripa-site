@@ -1,6 +1,6 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { getProperty } from '@/lib/jetimob'
+import { getProperty, formatPrice } from '@/lib/jetimob'
 
 export default async function ImovelPage({
   params,
@@ -21,9 +21,12 @@ export default async function ImovelPage({
     )
   }
 
-  const preco = property.preco
-    ? property.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    : 'Consulte'
+  const preco = property.contrato === 'Compra'
+    ? (property.valor_venda_visivel ? formatPrice(property.valor_venda) : 'Consulte')
+    : formatPrice(property.valor_locacao)
+
+  const area = property.area_util ?? property.area_privativa ?? property.area_total
+  const fotos = property.imagens ?? []
 
   return (
     <main className="min-h-screen bg-zinc-50">
@@ -31,11 +34,11 @@ export default async function ImovelPage({
         <Link href="/imoveis" className="text-sm text-zinc-500 hover:text-zinc-700">← Voltar</Link>
 
         <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-2">
-          {property.fotos.slice(0, 4).map((foto, i) => (
+          {fotos.slice(0, 4).map((foto, i) => (
             <div key={i} className={`relative bg-zinc-100 rounded-xl overflow-hidden ${i === 0 ? 'md:col-span-2 h-80' : 'h-48'}`}>
               <Image
-                src={foto.url}
-                alt={`${property.titulo} - foto ${i + 1}`}
+                src={foto.link}
+                alt={`${property.titulo_anuncio} - foto ${i + 1}`}
                 fill
                 className="object-cover"
                 sizes="(max-width: 768px) 100vw, 50vw"
@@ -43,7 +46,7 @@ export default async function ImovelPage({
               />
             </div>
           ))}
-          {property.fotos.length === 0 && (
+          {fotos.length === 0 && (
             <div className="md:col-span-2 h-80 bg-zinc-200 rounded-xl flex items-center justify-center text-zinc-400">
               Sem fotos disponíveis
             </div>
@@ -53,15 +56,15 @@ export default async function ImovelPage({
         <div className="mt-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="md:col-span-2 space-y-6">
             <div>
-              <p className="text-sm text-zinc-500 uppercase tracking-wide">{property.tipo} · {property.contrato}</p>
-              <h1 className="mt-1 text-2xl font-bold text-zinc-900">{property.titulo}</h1>
-              <p className="mt-1 text-zinc-500">{property.endereco?.bairro}, {property.endereco?.cidade} — {property.endereco?.estado}</p>
+              <p className="text-sm text-zinc-500 uppercase tracking-wide">{property.subtipo} · {property.contrato}</p>
+              <h1 className="mt-1 text-2xl font-bold text-zinc-900">{property.titulo_anuncio}</h1>
+              <p className="mt-1 text-zinc-500">{property.endereco_bairro}, {property.endereco_cidade} — {property.endereco_estado}</p>
             </div>
 
-            {property.descricao && (
+            {property.observacoes && (
               <div>
                 <h2 className="text-lg font-semibold text-zinc-800 mb-2">Descrição</h2>
-                <p className="text-zinc-600 leading-relaxed whitespace-pre-line">{property.descricao}</p>
+                <p className="text-zinc-600 leading-relaxed whitespace-pre-line">{property.observacoes}</p>
               </div>
             )}
           </div>
@@ -69,13 +72,13 @@ export default async function ImovelPage({
           <div className="space-y-4">
             <div className="bg-white rounded-xl border border-zinc-200 p-6 space-y-4">
               <p className="text-2xl font-bold text-zinc-900">{preco}</p>
-              {property.area > 0 && (
-                <p className="text-sm text-zinc-500">{property.area} m²</p>
+              {area && area > 0 && (
+                <p className="text-sm text-zinc-500">{area} {property.medida}</p>
               )}
               <div className="grid grid-cols-3 gap-3 text-center text-sm border-t border-zinc-100 pt-4">
-                {property.quartos > 0 && (
+                {property.dormitorios > 0 && (
                   <div>
-                    <p className="font-semibold text-zinc-800">{property.quartos}</p>
+                    <p className="font-semibold text-zinc-800">{property.dormitorios}</p>
                     <p className="text-zinc-500">Quartos</p>
                   </div>
                 )}
@@ -85,15 +88,15 @@ export default async function ImovelPage({
                     <p className="text-zinc-500">Banheiros</p>
                   </div>
                 )}
-                {property.vagas > 0 && (
+                {property.garagens > 0 && (
                   <div>
-                    <p className="font-semibold text-zinc-800">{property.vagas}</p>
+                    <p className="font-semibold text-zinc-800">{property.garagens}</p>
                     <p className="text-zinc-500">Vagas</p>
                   </div>
                 )}
               </div>
               <a
-                href={`https://wa.me/?text=Tenho interesse no imóvel ${property.codigo}: ${property.titulo}`}
+                href={`https://wa.me/5548984727799?text=Tenho interesse no imóvel ${property.codigo}: ${property.titulo_anuncio}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full text-center bg-zinc-900 text-white py-3 rounded-lg font-medium hover:bg-zinc-700 transition-colors"

@@ -1,33 +1,20 @@
 import Link from 'next/link'
 import Image from 'next/image'
-import { getProperties, type Property } from '@/lib/jetimob'
-
-function SkeletonCard() {
-  return (
-    <div className="rounded-xl overflow-hidden border border-zinc-200 bg-white animate-pulse">
-      <div className="h-52 bg-zinc-200" />
-      <div className="p-4 space-y-3">
-        <div className="h-4 bg-zinc-200 rounded w-3/4" />
-        <div className="h-4 bg-zinc-200 rounded w-1/2" />
-        <div className="h-4 bg-zinc-200 rounded w-1/3" />
-      </div>
-    </div>
-  )
-}
+import { getProperties, formatPrice, getMainImage, type Property } from '@/lib/jetimob'
 
 function PropertyCard({ property }: { property: Property }) {
-  const foto = property.fotos?.[0]?.url
-  const preco = property.preco
-    ? property.preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-    : 'Consulte'
+  const img = getMainImage(property)
+  const preco = property.contrato === 'Compra'
+    ? (property.valor_venda_visivel ? formatPrice(property.valor_venda) : 'Consulte')
+    : formatPrice(property.valor_locacao)
 
   return (
     <Link href={`/imovel/${property.codigo}`} className="group rounded-xl overflow-hidden border border-zinc-200 bg-white hover:shadow-lg transition-shadow">
       <div className="relative h-52 bg-zinc-100">
-        {foto ? (
+        {img ? (
           <Image
-            src={foto}
-            alt={property.titulo}
+            src={img}
+            alt={property.titulo_anuncio}
             fill
             className="object-cover group-hover:scale-105 transition-transform duration-300"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -35,21 +22,21 @@ function PropertyCard({ property }: { property: Property }) {
         ) : (
           <div className="flex items-center justify-center h-full text-zinc-400 text-sm">Sem foto</div>
         )}
-        {property.destaque && (
+        {property.destaque === 'Com destaque' && (
           <span className="absolute top-3 left-3 bg-amber-400 text-amber-900 text-xs font-semibold px-2 py-0.5 rounded-full">
             Destaque
           </span>
         )}
       </div>
       <div className="p-4 space-y-2">
-        <p className="text-xs text-zinc-500 uppercase tracking-wide">{property.tipo} · {property.contrato}</p>
-        <h2 className="font-semibold text-zinc-900 leading-snug line-clamp-2">{property.titulo}</h2>
-        <p className="text-sm text-zinc-500">{property.endereco?.bairro}, {property.endereco?.cidade}</p>
+        <p className="text-xs text-zinc-500 uppercase tracking-wide">{property.subtipo} · {property.contrato}</p>
+        <h2 className="font-semibold text-zinc-900 leading-snug line-clamp-2">{property.titulo_anuncio}</h2>
+        <p className="text-sm text-zinc-500">{property.endereco_bairro}, {property.endereco_cidade}</p>
         <p className="text-lg font-bold text-zinc-900">{preco}</p>
         <div className="flex gap-4 text-sm text-zinc-500 pt-1">
-          {property.quartos > 0 && <span>{property.quartos} quarto{property.quartos !== 1 ? 's' : ''}</span>}
+          {property.dormitorios > 0 && <span>{property.dormitorios} quarto{property.dormitorios !== 1 ? 's' : ''}</span>}
           {property.banheiros > 0 && <span>{property.banheiros} banheiro{property.banheiros !== 1 ? 's' : ''}</span>}
-          {property.vagas > 0 && <span>{property.vagas} vaga{property.vagas !== 1 ? 's' : ''}</span>}
+          {property.garagens > 0 && <span>{property.garagens} vaga{property.garagens !== 1 ? 's' : ''}</span>}
         </div>
       </div>
     </Link>
@@ -62,7 +49,7 @@ export default async function ImoveisPage() {
 
   try {
     const data = await getProperties({ pageSize: 24 })
-    properties = data.imoveis ?? []
+    properties = data.data ?? []
   } catch {
     error = true
   }

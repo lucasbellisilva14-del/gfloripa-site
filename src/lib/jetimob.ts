@@ -1,37 +1,48 @@
-export type PropertyPhoto = {
-  url: string
-  ordem: number
-}
-
-export type PropertyAddress = {
-  bairro: string
-  cidade: string
-  estado: string
-  latitude: number | null
-  longitude: number | null
+export type PropertyImage = {
+  link: string
+  link_thumb: string
+  titulo: string
 }
 
 export type Property = {
   codigo: string
-  titulo: string
-  descricao: string
-  preco: number
-  tipo: string
+  titulo_anuncio: string
+  observacoes: string
   contrato: string
-  area: number
-  quartos: number
+  tipo: string
+  subtipo: string
+  dormitorios: number
+  suites: number
   banheiros: number
-  vagas: number
-  fotos: PropertyPhoto[]
-  endereco: PropertyAddress
-  destaque: boolean
+  garagens: number
+  area_total: number | null
+  area_privativa: number | null
+  area_util: number | null
+  terreno_total: string | null
+  medida: string
+  valor_venda: number | null
+  valor_locacao: number | null
+  valor_temporada: number | null
+  valor_venda_visivel: boolean
+  valor_locacao_visivel: boolean
+  destaque: string
+  latitude: number | null
+  longitude: number | null
+  endereco_bairro: string
+  endereco_cidade: string
+  endereco_estado: string
+  endereco_logradouro: string
+  endereco_cep: string
+  imagens: PropertyImage[]
+  status: string
 }
 
 export type PropertiesResponse = {
-  imoveis: Property[]
   total: number
-  pagina: number
-  totalPaginas: number
+  page: number
+  pageSize: number
+  totalPages: number
+  data: Property[]
 }
 
 const API_URL = process.env.JETIMOB_API_URL
@@ -68,4 +79,13 @@ export async function getProperty(code: string): Promise<Property | null> {
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
   return res.json()
+}
+
+export function formatPrice(value: number | null): string {
+  if (!value) return 'Consulte'
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 })
+}
+
+export function getMainImage(property: Property): string {
+  return property.imagens?.[0]?.link_thumb || property.imagens?.[0]?.link || ''
 }
