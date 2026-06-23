@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 const slides = [
   { img: '/assets/hero-residencial.png', pos: '50% 42%', anim: 'kb1' },
   { img: '/assets/hero-ondas.jpg', pos: '50% 45%', anim: 'kb2' },
-  { img: '/assets/hero-costa.jpg', pos: '50% 50%', anim: 'kb1' },
+  { img: '/assets/hero-baleia.png', pos: '50% 40%', anim: 'kb1' },
 ]
 
 export default function HeroCarousel() {

@@ -16,8 +16,12 @@ const regions = [
 export default async function Home() {
   let featured: Property[] = []
   try {
-    const data = await getProperties({ page: 1, pageSize: 6 })
-    featured = data.data ?? []
+    const data = await getProperties({ page: 1, pageSize: 50 })
+    const all = data.data ?? []
+    featured = all
+      .filter((p) => p.endereco_bairro?.toLowerCase().includes('gamboa'))
+      .slice(0, 6)
+    if (featured.length === 0) featured = all.slice(0, 6)
   } catch {
     featured = []
   }
