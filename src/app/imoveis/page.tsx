@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import PropertyCard from '@/components/PropertyCard'
+import FilterBar from '@/components/FilterBar'
 import { getProperties, type Property } from '@/lib/jetimob'
 
 const PAGE_SIZE = 24
@@ -64,39 +65,60 @@ export default async function ImoveisPage({
   searchParams: Promise<Record<string, string>>
 }) {
   const params = await searchParams
-  const currentPage = Math.max(1, parseInt(params.page ?? '1', 10))
 
-  let properties: Property[] = []
-  let totalPages = 1
-  let total = 0
+  let all: Property[] = []
   let error = false
 
   try {
-    const data = await getProperties({ page: currentPage, pageSize: PAGE_SIZE })
-    properties = data.data ?? []
-    totalPages = data.totalPages ?? 1
-    total = data.total ?? 0
+    const data = await getProperties({ page: 1, pageSize: 100 })
+    all = data.data ?? []
   } catch {
     error = true
   }
 
-  const contratoLabel = params.contrato ?? 'Todos os contratos'
-  const countText = error ? '' : total > 0 ? `${total} imóveis encontrados` : 'Nenhum imóvel encontrado'
+  if (!error) {
+    const contratoParam = params.contrato
+    if (contratoParam) {
+      const map: Record<string, string[]> = {
+        compra: ['compra', 'venda'],
+        aluguel: ['loca', 'aluguel'],
+        temporada: ['temporada'],
+        lancamento: ['lançamento', 'lancamento'],
+      }
+      const keywords = map[contratoParam] ?? []
+      all = all.filter((p) => keywords.some((k) => p.contrato?.toLowerCase().includes(k)))
+    }
 
-  const dropdownStyle = {
-    background: '#13234F' as const,
-    border: '1px solid rgba(255,255,255,.14)',
-    color: '#fff' as const,
-    borderRadius: 11,
-    padding: '13px 18px',
-    fontSize: 13.5,
-    cursor: 'pointer' as const,
-    minWidth: 160,
-    textAlign: 'left' as const,
-    display: 'flex' as const,
-    justifyContent: 'space-between' as const,
-    gap: 14,
+    const tipoParam = params.tipo
+    if (tipoParam) {
+      all = all.filter(
+        (p) =>
+          p.subtipo?.toLowerCase().includes(tipoParam.toLowerCase()) ||
+          p.tipo?.toLowerCase().includes(tipoParam.toLowerCase())
+      )
+    }
+
+    const bairroParam = params.bairro
+    if (bairroParam) {
+      all = all.filter(
+        (p) =>
+          p.endereco_bairro?.toLowerCase().includes(bairroParam.toLowerCase()) ||
+          p.endereco_cidade?.toLowerCase().includes(bairroParam.toLowerCase())
+      )
+    }
+
+    const quartosParam = parseInt(params.quartos ?? '0')
+    if (quartosParam > 0) {
+      all = all.filter((p) => p.dormitorios >= quartosParam)
+    }
   }
+
+  const total = all.length
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
+  const currentPage = Math.max(1, parseInt(params.page ?? '1'))
+  const properties = all.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+
+  const countText = error ? '' : total > 0 ? `${total} imóveis encontrados` : 'Nenhum imóvel encontrado'
 
   return (
     <div style={{ background: '#0A1430', minHeight: '100vh', fontFamily: "'Jost',sans-serif", color: '#fff' }}>
@@ -106,21 +128,7 @@ export default async function ImoveisPage({
         <div style={{ maxWidth: 1300, margin: '0 auto' }}>
           <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: '#E8B23A', marginBottom: 6 }}>Garopaba e região</div>
           <h1 style={{ fontFamily: "'Marcellus',serif", fontSize: 30, marginBottom: 18 }}>Imóveis disponíveis</h1>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={dropdownStyle}>
-              {contratoLabel} <span style={{ color: '#E8B23A' }}>▾</span>
-            </div>
-            <div style={dropdownStyle}>
-              {params.tipo ?? 'Tipo'} <span style={{ color: '#E8B23A' }}>▾</span>
-            </div>
-            <div style={{ ...dropdownStyle, minWidth: 170 }}>
-              {params.bairro ?? 'Bairro'} <span style={{ color: '#E8B23A' }}>▾</span>
-            </div>
-            <div style={{ ...dropdownStyle, minWidth: 130 }}>
-              {params.quartos ? `${params.quartos}+ quartos` : 'Quartos'} <span style={{ color: '#E8B23A' }}>▾</span>
-            </div>
-            <Link href="/imoveis" style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', cursor: 'pointer', textDecoration: 'underline' }}>Limpar</Link>
-          </div>
+          <FilterBar searchParams={params} />
           <div style={{ marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,.65)' }}>{countText}</div>
         </div>
       </div>

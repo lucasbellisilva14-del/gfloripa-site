@@ -9,9 +9,23 @@ const slides = [
   { img: '/assets/hero-baleia.png', pos: '50% 40%', anim: 'kb1' },
 ]
 
+const selectStyle: React.CSSProperties = {
+  background: 'transparent',
+  color: '#fff',
+  border: 'none',
+  fontFamily: "'Jost',sans-serif",
+  fontSize: 14,
+  cursor: 'pointer',
+  width: '100%',
+  outline: 'none',
+  appearance: 'none',
+}
+
 export default function HeroCarousel() {
   const [current, setCurrent] = useState(0)
   const [contrato, setContrato] = useState('Comprar')
+  const [tipo, setTipo] = useState('Qualquer')
+  const [bairro, setBairro] = useState('Qualquer')
   const router = useRouter()
 
   useEffect(() => {
@@ -19,15 +33,18 @@ export default function HeroCarousel() {
     return () => clearInterval(t)
   }, [])
 
-  const contratoMap: Record<string, string> = {
-    'Comprar': '/venda',
-    'Alugar': '/alugar',
-    'Temporada': '/temporada',
-    'Lançamentos': '/lancamentos',
-  }
-
   function handleBuscar() {
-    router.push(contratoMap[contrato] ?? '/imoveis')
+    const contratoMap: Record<string, string> = {
+      'Comprar': 'compra',
+      'Alugar': 'aluguel',
+      'Temporada': 'temporada',
+      'Lançamentos': 'lancamento',
+    }
+    const q = new URLSearchParams()
+    q.set('contrato', contratoMap[contrato] ?? 'compra')
+    if (tipo !== 'Qualquer') q.set('tipo', tipo)
+    if (bairro !== 'Qualquer') q.set('bairro', bairro)
+    router.push(`/imoveis?${q.toString()}`)
   }
 
   return (
@@ -129,11 +146,19 @@ export default function HeroCarousel() {
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 140px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
               <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Tipo</div>
-              <div style={{ fontSize: 14, marginTop: 3 }}>Qualquer ▾</div>
+              <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={selectStyle}>
+                {['Qualquer', 'Apartamento', 'Casa', 'Terreno', 'Cobertura', 'Casa de Condomínio'].map((o) => (
+                  <option key={o} value={o} style={{ background: '#0A1430' }}>{o}</option>
+                ))}
+              </select>
             </div>
             <div style={{ flex: '1.3 1 160px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
               <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Bairro</div>
-              <div style={{ fontSize: 14, marginTop: 3 }}>Praia da Gamboa ▾</div>
+              <select value={bairro} onChange={(e) => setBairro(e.target.value)} style={selectStyle}>
+                {['Qualquer', 'Praia da Gamboa', 'Gamboa', 'Siriú', 'Centro', 'Paulo Lopes'].map((o) => (
+                  <option key={o} value={o} style={{ background: '#0A1430' }}>{o}</option>
+                ))}
+              </select>
             </div>
             <button
               onClick={handleBuscar}
