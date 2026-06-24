@@ -40,6 +40,7 @@ button { font-family: inherit; }
   .sec-h2 { font-size:30px !important }
   .bento { grid-template-columns:1fr !important;grid-auto-rows:auto !important }
   .bento > * { grid-column:auto !important;grid-row:auto !important;min-height:180px !important }
+  .three-col { grid-template-columns:1fr !important }
   .bottomnav { display:flex !important }
   .m-burger { display:flex !important }
 }
