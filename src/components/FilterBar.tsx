@@ -31,7 +31,6 @@ const tipoOptions = ['Todos', 'Apartamento', 'Casa', 'Terreno', 'Cobertura', 'Ca
 const bairroOptions = [
   'Todos',
   'Praia da Gamboa',
-  'Gamboa',
   'Siriú',
   'Centro Garopaba',
   'Paulo Lopes',

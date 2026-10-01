@@ -155,7 +155,7 @@ export default function HeroCarousel() {
             <div style={{ flex: '1.3 1 160px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
               <div style={{ fontSize: 10, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Bairro</div>
               <select value={bairro} onChange={(e) => setBairro(e.target.value)} style={selectStyle}>
-                {['Qualquer', 'Praia da Gamboa', 'Gamboa', 'Siriú', 'Centro', 'Paulo Lopes'].map((o) => (
+                {['Qualquer', 'Praia da Gamboa', 'Siriú', 'Centro', 'Paulo Lopes'].map((o) => (
                   <option key={o} value={o} style={{ background: '#0A1430' }}>{o}</option>
                 ))}
               </select>

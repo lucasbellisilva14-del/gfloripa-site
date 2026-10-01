@@ -99,11 +99,28 @@ export default async function ImoveisPage({
 
     const bairroParam = params.bairro
     if (bairroParam) {
-      all = all.filter(
-        (p) =>
-          p.endereco_bairro?.toLowerCase().includes(bairroParam.toLowerCase()) ||
-          p.endereco_cidade?.toLowerCase().includes(bairroParam.toLowerCase())
-      )
+      // Nomes exibidos no site → como o bairro/cidade está cadastrado na Jetimob
+      const aliases: Record<string, { bairro: string; cidade?: string }> = {
+        'praia da gamboa': { bairro: 'gamboa', cidade: 'garopaba' },
+        'gamboa': { bairro: 'gamboa', cidade: 'garopaba' },
+        'centro garopaba': { bairro: 'centro', cidade: 'garopaba' },
+        'centro': { bairro: 'centro', cidade: 'garopaba' },
+        'siriú': { bairro: 'siriú' },
+      }
+      const alias = aliases[bairroParam.toLowerCase()]
+      if (alias) {
+        all = all.filter(
+          (p) =>
+            p.endereco_bairro?.toLowerCase().includes(alias.bairro) &&
+            (!alias.cidade || p.endereco_cidade?.toLowerCase().includes(alias.cidade))
+        )
+      } else {
+        all = all.filter(
+          (p) =>
+            p.endereco_bairro?.toLowerCase().includes(bairroParam.toLowerCase()) ||
+            p.endereco_cidade?.toLowerCase().includes(bairroParam.toLowerCase())
+        )
+      }
     }
 
     const quartosParam = parseInt(params.quartos ?? '0')
