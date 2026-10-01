@@ -2,6 +2,7 @@ import Link from 'next/link'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Gallery from '@/components/Gallery'
+import InterestForm from '@/components/InterestForm'
 import { getProperty, formatPrice } from '@/lib/jetimob'
 
 function getContrato(contrato: string): string {
@@ -60,8 +61,6 @@ export default async function ImovelPage({
     { value: area && area > 0 ? `${area} ${property.medida ?? 'm²'}` : '—', label: 'Área' },
   ]
 
-  const whatsappMsg = encodeURIComponent(`Tenho interesse no imóvel ${property.codigo}: ${property.titulo_anuncio}`)
-
   return (
     <div style={{ background: '#0A1430', minHeight: '100vh', fontFamily: "'Jost',sans-serif", color: '#fff' }}>
       <Header />
@@ -97,22 +96,7 @@ export default async function ImovelPage({
                 ))}
               </div>
 
-              <a
-                href={`https://wa.me/5548984727799?text=${whatsappMsg}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'block', textAlign: 'center', background: '#E8B23A', color: '#0A1430', borderRadius: 12, padding: 15, fontSize: 14, fontWeight: 600, letterSpacing: '.03em', cursor: 'pointer', marginBottom: 10 }}
-              >
-                Tenho interesse
-              </a>
-              <a
-                href={`https://wa.me/5548984727799?text=${encodeURIComponent(`Gostaria de agendar uma visita ao imóvel ${property.codigo}`)}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{ display: 'block', textAlign: 'center', background: 'transparent', border: '1.5px solid rgba(255,255,255,.3)', color: '#fff', borderRadius: 12, padding: 15, fontSize: 14, cursor: 'pointer' }}
-              >
-                Agendar uma visita
-              </a>
+              <InterestForm codigo={property.codigo} titulo={property.titulo_anuncio} />
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20, background: '#10204A', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: '14px 16px' }}>
                 <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'radial-gradient(circle at 50% 125%, #E8B23A 0 52%, transparent 53%), #16265C', flexShrink: 0 }} />

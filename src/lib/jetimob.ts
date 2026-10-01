@@ -37,6 +37,20 @@ export type Property = {
   endereco_cep: string
   imagens: PropertyImage[]
   status: string
+  id_corretor: number | null
+}
+
+export type Corretor = {
+  id: number
+  nome: string
+  creci: string
+  cargo: string
+  email: string
+  telefone: string | null
+  telefone_whatsapp: boolean | null
+  telefone2: string | null
+  telefone2_whatsapp: boolean | null
+  avatar: string | null
 }
 
 export type PropertiesResponse = {
@@ -120,6 +134,74 @@ export async function getProperty(code: string): Promise<Property | null> {
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
   return res.json()
+}
+
+export const getCorretores = unstable_cache(
+  async (): Promise<Corretor[]> => {
+    const res = await fetch(buildUrl('/corretores'))
+    if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
+    return res.json()
+  },
+  ['jetimob-corretores'],
+  { revalidate: 3600 }
+)
+
+export async function getCorretorById(id: number | null): Promise<Corretor | null> {
+  if (!id) return null
+  const corretores = await getCorretores()
+  return corretores.find((c) => c.id === id) ?? null
+}
+
+// Número de WhatsApp do corretor (só dígitos, com DDI), ou null se não tiver.
+export function getCorretorWhatsapp(c: Corretor | null): string | null {
+  if (!c) return null
+  if (c.telefone && c.telefone_whatsapp) return c.telefone.replace(/\D/g, '')
+  if (c.telefone2 && c.telefone2_whatsapp) return c.telefone2.replace(/\D/g, '')
+  return null
+}
+
+export type LeadInput = {
+  full_name: string
+  email: string
+  phone: string
+  message?: string
+  property_code?: string
+  responsible?: string
+  subject?: string
+  url?: string
+  gclid?: string
+  utm_source?: string
+  utm_medium?: string
+  utm_campaign?: string
+}
+
+// Cria um lead no CRM Jetimob (POST /leads/{PUBLIC_KEY}, multipart/form-data).
+export async function createLead(input: LeadInput): Promise<void> {
+  const publicKey = process.env.JETIMOB_PUBLIC_KEY
+  const privateKey = process.env.JETIMOB_PRIVATE_KEY
+  if (!publicKey || !privateKey) throw new Error('Chaves de lead da Jetimob não configuradas')
+
+  const form = new FormData()
+  form.set('full_name', input.full_name)
+  form.set('email', input.email)
+  form.set('phone', input.phone)
+  form.set('source', 'Site Nagamboa')
+  if (input.message) form.set('message', input.message)
+  if (input.property_code) form.set('property_code', input.property_code)
+  if (input.responsible) form.set('responsible', input.responsible)
+  if (input.subject) form.set('subject', input.subject)
+  if (input.url) form.set('url', input.url)
+  if (input.gclid) form.set('gclid', input.gclid)
+  if (input.utm_source) form.set('utm_source', input.utm_source)
+  if (input.utm_medium) form.set('utm_medium', input.utm_medium)
+  if (input.utm_campaign) form.set('utm_campaign', input.utm_campaign)
+
+  const res = await fetch(`https://api.jetimob.com/leads/${publicKey}`, {
+    method: 'POST',
+    headers: { 'Authorization-Key': privateKey },
+    body: form,
+  })
+  if (!res.ok) throw new Error(`Jetimob lead error: ${res.status} ${await res.text().catch(() => '')}`)
 }
 
 export function formatPrice(value: number | null): string {
