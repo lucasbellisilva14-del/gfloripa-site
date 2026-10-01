@@ -6,11 +6,11 @@ import Footer from '@/components/Footer'
 import PropertyCard from '@/components/PropertyCard'
 import { getAllProperties, type Property } from '@/lib/jetimob'
 
-const regions = [
-  { label: 'Gamboa', bairro: 'Praia da Gamboa', grad: 'linear-gradient(150deg,#0E1D48,#1B4965 55%,#5FA8A0)', col: '1', row: '1 / span 2' },
-  { label: 'Siriú', bairro: 'Siriú', grad: 'linear-gradient(135deg,#16265C,#2C7A7B,#7FB7B0)', col: '2 / span 2', row: '1' },
-  { label: 'Centro', bairro: 'Centro', grad: 'linear-gradient(135deg,#1B2E6B,#3A6EA5,#86B8D9)', col: '2', row: '2' },
-  { label: 'Paulo Lopes', bairro: 'Paulo Lopes', grad: 'linear-gradient(150deg,#123A5E,#2C5F5A,#6FA89A)', col: '3', row: '2' },
+const regions: { label: string; bairro: string; grad: string; col: string; row: string; img?: string; pos?: string }[] = [
+  { label: 'Gamboa', bairro: 'Praia da Gamboa', img: '/regioes/gamboa.webp', grad: 'linear-gradient(150deg,#0E1D48,#1B4965 55%,#5FA8A0)', col: '2 / span 2', row: '1' },
+  { label: 'Siriú', bairro: 'Siriú', img: '/regioes/siriu.webp', pos: 'center 30%', grad: 'linear-gradient(135deg,#16265C,#2C7A7B,#7FB7B0)', col: '1', row: '1 / span 2' },
+  { label: 'Centro', bairro: 'Centro', img: '/regioes/centro.webp', grad: 'linear-gradient(135deg,#1B2E6B,#3A6EA5,#86B8D9)', col: '2', row: '2' },
+  { label: 'Paulo Lopes', bairro: 'Paulo Lopes', img: '/regioes/paulo-lopes.webp', pos: 'center 30%', grad: 'linear-gradient(150deg,#123A5E,#2C5F5A,#6FA89A)', col: '3', row: '2' },
 ]
 
 export default async function Home() {
@@ -48,7 +48,7 @@ export default async function Home() {
                 className="pcard"
                 style={{ position: 'relative', overflow: 'hidden', borderRadius: 16, minHeight: 200, cursor: 'pointer', border: '1px solid rgba(255,255,255,.08)', gridColumn: r.col, gridRow: r.row, display: 'block' }}
               >
-                <div className="pimg" style={{ position: 'absolute', inset: 0, background: r.grad }} />
+                <div className="pimg" style={{ position: 'absolute', inset: 0, background: r.img ? `url(${r.img}) ${r.pos ?? 'center'}/cover no-repeat` : r.grad }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,transparent 38%,rgba(8,14,34,.85))' }} />
                 <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 82% 14%, rgba(232,178,58,.22), transparent 46%)' }} />
                 <div style={{ position: 'absolute', left: 22, right: 22, bottom: 20 }}>
