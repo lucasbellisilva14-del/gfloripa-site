@@ -1,3 +1,5 @@
+import { unstable_cache } from 'next/cache'
+
 export type PropertyImage = {
   link: string
   link_thumb: string
@@ -68,7 +70,18 @@ export async function getProperties(params?: {
   return res.json()
 }
 
-export async function getAllProperties(): Promise<Property[]> {
+// Versão enxuta do imóvel para listagens: só os campos que os cards e
+// filtros usam, com apenas a primeira foto. A resposta completa da Jetimob
+// (~5 MB) estoura o limite de 2 MB do data cache do Next; a enxuta cabe.
+function slimProperty(p: Property): Property {
+  return {
+    ...p,
+    observacoes: '',
+    imagens: p.imagens?.length ? [p.imagens[0]] : [],
+  }
+}
+
+async function fetchAllProperties(): Promise<Property[]> {
   const first = await getProperties({ page: 1, pageSize: 500 })
   const all = [...(first.data ?? [])]
   let page = first.page
@@ -78,7 +91,22 @@ export async function getAllProperties(): Promise<Property[]> {
     if (!next.data?.length) break
     all.push(...next.data)
   }
-  return all
+  return all.map(slimProperty)
+}
+
+// Cache em memória (lambda quente / dev) por cima do data cache do Next.
+let memCache: { data: Property[]; at: number } | null = null
+const MEM_TTL_MS = 2 * 60 * 1000
+
+const getAllPropertiesCached = unstable_cache(fetchAllProperties, ['jetimob-all-properties'], {
+  revalidate: 120,
+})
+
+export async function getAllProperties(): Promise<Property[]> {
+  if (memCache && Date.now() - memCache.at < MEM_TTL_MS) return memCache.data
+  const data = await getAllPropertiesCached()
+  memCache = { data, at: Date.now() }
+  return data
 }
 
 export async function getActivePropertyIds(): Promise<string[]> {
