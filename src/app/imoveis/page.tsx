@@ -3,7 +3,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import PropertyCard from '@/components/PropertyCard'
 import FilterBar from '@/components/FilterBar'
-import { getProperties, type Property } from '@/lib/jetimob'
+import { getAllProperties, type Property } from '@/lib/jetimob'
 
 const PAGE_SIZE = 24
 
@@ -70,8 +70,7 @@ export default async function ImoveisPage({
   let error = false
 
   try {
-    const data = await getProperties({ page: 1, pageSize: 100 })
-    all = data.data ?? []
+    all = await getAllProperties()
   } catch {
     error = true
   }

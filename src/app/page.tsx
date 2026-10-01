@@ -4,7 +4,7 @@ import HeroCarousel from '@/components/HeroCarousel'
 import TouristMap from '@/components/TouristMap'
 import Footer from '@/components/Footer'
 import PropertyCard from '@/components/PropertyCard'
-import { getProperties, type Property } from '@/lib/jetimob'
+import { getAllProperties, type Property } from '@/lib/jetimob'
 
 const regions = [
   { label: 'Gamboa', bairro: 'Praia da Gamboa', grad: 'linear-gradient(150deg,#0E1D48,#1B4965 55%,#5FA8A0)', col: '1', row: '1 / span 2' },
@@ -16,8 +16,7 @@ const regions = [
 export default async function Home() {
   let featured: Property[] = []
   try {
-    const data = await getProperties({ page: 1, pageSize: 50 })
-    const all = data.data ?? []
+    const all = await getAllProperties()
     featured = all
       .filter((p) => p.endereco_bairro?.toLowerCase().includes('gamboa'))
       .slice(0, 6)

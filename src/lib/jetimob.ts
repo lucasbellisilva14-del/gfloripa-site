@@ -68,6 +68,19 @@ export async function getProperties(params?: {
   return res.json()
 }
 
+export async function getAllProperties(): Promise<Property[]> {
+  const first = await getProperties({ page: 1, pageSize: 500 })
+  const all = [...(first.data ?? [])]
+  let page = first.page
+  while (all.length < first.total && page < first.totalPages) {
+    page += 1
+    const next = await getProperties({ page, pageSize: 500 })
+    if (!next.data?.length) break
+    all.push(...next.data)
+  }
+  return all
+}
+
 export async function getActivePropertyIds(): Promise<string[]> {
   const res = await fetch(buildUrl('/imoveis-ativos'), { next: { revalidate: 60 } })
   if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
