@@ -226,7 +226,9 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           model: MODEL,
           max_tokens: 1024,
-          system: SYSTEM_PROMPT,
+          // cache_control: o prefixo estável (tools + system) fica em cache na
+          // Anthropic, reduzindo o custo de entrada das mensagens seguintes
+          system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
           tools,
           messages,
         }),
