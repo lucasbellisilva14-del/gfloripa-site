@@ -1,3 +1,4 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import HeroCarousel from '@/components/HeroCarousel'
@@ -12,6 +13,10 @@ const regions: { label: string; bairro: string; grad: string; col: string; row: 
   { label: 'Centro', bairro: 'Centro', img: '/regioes/centro.webp', grad: 'linear-gradient(135deg,#1B2E6B,#3A6EA5,#86B8D9)', col: '2', row: '2' },
   { label: 'Paulo Lopes', bairro: 'Paulo Lopes', img: '/regioes/paulo-lopes.webp', pos: 'center 30%', grad: 'linear-gradient(150deg,#123A5E,#2C5F5A,#6FA89A)', col: '3', row: '2' },
 ]
+
+export const metadata: Metadata = {
+  alternates: { canonical: '/' },
+}
 
 export default async function Home() {
   let featured: Property[] = []

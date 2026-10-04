@@ -1,9 +1,16 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import PropertyCard from '@/components/PropertyCard'
 import FilterBar from '@/components/FilterBar'
 import { getAllProperties, type Property } from '@/lib/jetimob'
+
+export const metadata: Metadata = {
+  title: 'Imóveis à venda e aluguel em Garopaba e Praia da Gamboa | Nagamboa Imóveis',
+  description: 'Casas, apartamentos e terrenos à venda e para alugar em Garopaba, Praia da Gamboa, Siriú e região. Filtre por tipo, bairro e preço e encontre o seu imóvel.',
+  alternates: { canonical: '/imoveis' },
+}
 
 const PAGE_SIZE = 24
 
