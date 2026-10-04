@@ -15,7 +15,7 @@ const numeros = [
 ]
 
 const corretores = [
-  { nome: 'Dara Maiara', creci: 'CRECI-SC', especialidade: 'Praia da Gamboa' },
+  { nome: 'Dara Maiara', creci: 'CRECI-SC', especialidade: 'Gerente administrativa' },
   { nome: 'Edmilson de Araujo', creci: 'CRECI-SC', especialidade: 'Garopaba' },
   { nome: 'Flávio Joaquim Goedert', creci: 'CRECI-SC', especialidade: 'Temporada' },
   { nome: 'Juliana de Lima', creci: 'CRECI-SC', especialidade: 'Lançamentos' },
