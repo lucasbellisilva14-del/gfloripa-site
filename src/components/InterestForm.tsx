@@ -70,8 +70,8 @@ export default function InterestForm({ codigo, titulo }: Props) {
 
     const texto =
       open === 'visita'
-        ? `Olá! Sou ${nome} e gostaria de agendar uma visita ao imóvel ${codigo} — ${titulo}.`
-        : `Olá! Sou ${nome} e tenho interesse no imóvel ${codigo} — ${titulo}.${mensagem ? ` ${mensagem}` : ''}`
+        ? `Olá! Sou ${nome} e gostaria de agendar uma visita ao imóvel ${codigo} (${titulo}).`
+        : `Olá! Sou ${nome} e tenho interesse no imóvel ${codigo} (${titulo}).${mensagem ? ` ${mensagem}` : ''}`
     window.open(`https://wa.me/${whatsapp}?text=${encodeURIComponent(texto)}`, '_blank', 'noopener,noreferrer')
     setSending(false)
     setOpen(null)

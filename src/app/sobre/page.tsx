@@ -4,7 +4,7 @@ import Footer from '@/components/Footer'
 const valores = [
   { titulo: 'Transparência', desc: 'Informações claras, sem surpresas. Do primeiro contato ao fechamento, você sabe exatamente o que está acontecendo.' },
   { titulo: 'Conhecimento local', desc: 'Somos da Gamboa. Conhecemos cada rua, cada praia, cada maré. Esse conhecimento está a serviço da sua escolha.' },
-  { titulo: 'Atendimento próximo', desc: 'Você não é um número. Cada família tem uma história e um sonho — e é isso que guia o nosso trabalho.' },
+  { titulo: 'Atendimento próximo', desc: 'Você não é um número. Cada família tem uma história e um sonho, e é isso que guia o nosso trabalho.' },
 ]
 
 const numeros = [
@@ -41,7 +41,7 @@ export default function SobrePage() {
           </div>
           <h1 style={{ fontFamily: "'Marcellus',serif", fontSize: 58, lineHeight: 1.08, letterSpacing: '-.01em' }}>Somos da Gamboa.<br />Vivemos a Gamboa.</h1>
           <p style={{ fontSize: 17, lineHeight: 1.6, color: 'rgba(255,255,255,.75)', maxWidth: 520, margin: '22px auto 0', fontWeight: 300 }}>
-            A Nagamboa nasceu do amor por essa região. Uma imobiliária que é parte da comunidade — não apenas um escritório que vende imóveis.
+            A Nagamboa nasceu do amor por essa região. Uma imobiliária que é parte da comunidade, não apenas um escritório que vende imóveis.
           </p>
         </div>
       </section>
@@ -52,10 +52,10 @@ export default function SobrePage() {
             <div style={{ fontSize: 12, letterSpacing: '.26em', textTransform: 'uppercase', color: '#E8B23A', marginBottom: 12 }}>Nossa história</div>
             <h2 style={{ fontFamily: "'Marcellus',serif", fontSize: 38, lineHeight: 1.2, marginBottom: 24 }}>A baleia-franca como símbolo</h2>
             <p style={{ fontSize: 16, lineHeight: 1.75, color: 'rgba(255,255,255,.72)', marginBottom: 18, fontWeight: 300 }}>
-              A Praia da Gamboa é um dos poucos lugares do Brasil onde as baleias-francas chegam todos os anos para parir e criar seus filhotes. Assim como elas, voltamos sempre — porque aqui é onde a vida acontece de verdade.
+              A Praia da Gamboa é um dos poucos lugares do Brasil onde as baleias-francas chegam todos os anos para parir e criar seus filhotes. Assim como elas, voltamos sempre, porque aqui é onde a vida acontece de verdade.
             </p>
             <p style={{ fontSize: 16, lineHeight: 1.75, color: 'rgba(255,255,255,.72)', fontWeight: 300 }}>
-              Há mais de 15 anos, ajudamos famílias a encontrar seu lugar nesse pedaço especial do litoral catarinense. Conhecemos cada trilha, cada maré, cada vizinho — e esse conhecimento está a serviço de quem confia em nós.
+              Há mais de 15 anos, ajudamos famílias a encontrar seu lugar nesse pedaço especial do litoral catarinense. Conhecemos cada trilha, cada maré, cada vizinho, e esse conhecimento está a serviço de quem confia em nós.
             </p>
           </div>
           <div style={{ background: '#10204A', border: '1px solid rgba(255,255,255,.08)', borderRadius: 18, padding: '48px 40px', display: 'flex', flexDirection: 'column', gap: 32 }}>

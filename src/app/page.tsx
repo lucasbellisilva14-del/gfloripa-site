@@ -37,7 +37,7 @@ export default async function Home() {
             <div style={{ fontSize: 12, letterSpacing: '.26em', textTransform: 'uppercase', color: '#E8B23A' }}>Onde você quer morar</div>
             <h2 className="sec-h2" style={{ fontFamily: "'Marcellus',serif", fontSize: 38, marginTop: 8 }}>Explore por região</h2>
             <p style={{ fontSize: 15, color: 'rgba(255,255,255,.65)', maxWidth: 540, margin: '12px auto 0', fontWeight: 300 }}>
-              De Gamboa a Paulo Lopes — encontre imóveis no ponto certo do litoral de Garopaba.
+              De Gamboa a Paulo Lopes: encontre imóveis no ponto certo do litoral de Garopaba.
             </p>
           </div>
           <div className="bento" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gridAutoRows: '200px', gap: 18 }}>

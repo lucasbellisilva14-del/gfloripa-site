@@ -55,10 +55,10 @@ export default async function ImovelPage({
   const localText = [property.endereco_bairro, property.endereco_cidade, property.endereco_estado].filter(Boolean).join(', ')
 
   const specBoxes = [
-    { value: property.dormitorios > 0 ? String(property.dormitorios) : '—', label: 'Quartos' },
-    { value: property.banheiros > 0 ? String(property.banheiros) : '—', label: 'Banheiros' },
-    { value: property.garagens > 0 ? String(property.garagens) : '—', label: 'Vagas' },
-    { value: area && area > 0 ? `${area} ${property.medida ?? 'm²'}` : '—', label: 'Área' },
+    { value: property.dormitorios > 0 ? String(property.dormitorios) : '-', label: 'Quartos' },
+    { value: property.banheiros > 0 ? String(property.banheiros) : '-', label: 'Banheiros' },
+    { value: property.garagens > 0 ? String(property.garagens) : '-', label: 'Vagas' },
+    { value: area && area > 0 ? `${area} ${property.medida ?? 'm²'}` : '-', label: 'Área' },
   ]
 
   return (

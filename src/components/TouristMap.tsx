@@ -9,7 +9,7 @@ const MAP_POINTS = [
     num: '01',
     label: 'Miradouro Vista da Gamboa',
     kicker: 'Ponto 01',
-    desc: 'De lá de cima, você vê a enseada inteira — a praia, as dunas, as pedras e o oceano aberto. O melhor pôr do sol de Garopaba.',
+    desc: 'De lá de cima, você vê a enseada inteira: a praia, as dunas, as pedras e o oceano aberto. O melhor pôr do sol de Garopaba.',
     meta0: '▸ Miradouro Vista da Gamboa',
     meta1: 'Lat -28.034 · Long -48.617',
     meta2: 'Altitude 86 m',
@@ -21,7 +21,7 @@ const MAP_POINTS = [
     num: '02',
     label: 'Restaurantes locais',
     kicker: 'Ponto 02',
-    desc: 'Frutos do mar fresquíssimos e tainha na brasa — a gastronomia da Gamboa é parte do refúgio. Almoço com vista pro mar.',
+    desc: 'Frutos do mar fresquíssimos e tainha na brasa. A gastronomia da Gamboa é parte do refúgio. Almoço com vista pro mar.',
     meta0: '▸ Restaurantes locais',
     meta1: 'Região central da praia',
     meta2: 'Culinária típica catarinense',
@@ -45,7 +45,7 @@ const MAP_POINTS = [
     num: '04',
     label: 'Casa Nagamboa',
     kicker: 'Ponto 04',
-    desc: 'Nossa sede fica bem na Gamboa — somos daqui, vivemos daqui, e conhecemos cada detalhe desta praia como poucos.',
+    desc: 'Nossa sede fica bem na Gamboa. Somos daqui, vivemos daqui, e conhecemos cada detalhe desta praia como poucos.',
     meta0: '▸ Casa Nagamboa',
     meta1: 'R. das Gaivotas, Gamboa',
     meta2: 'CRECI-SC',
@@ -57,7 +57,7 @@ const MAP_POINTS = [
     num: '05',
     label: 'Dunas da Gamboa',
     kicker: 'Ponto 05',
-    desc: 'As dunas formam a fronteira natural entre a Gamboa e o Parque Nacional — área de preservação e trilhas com vista única.',
+    desc: 'As dunas formam a fronteira natural entre a Gamboa e o Parque Nacional, área de preservação e trilhas com vista única.',
     meta0: '▸ Dunas da Gamboa',
     meta1: 'Parque Nacional · trilha',
     meta2: 'Área de preservação',
@@ -78,7 +78,7 @@ export default function TouristMap() {
           <div style={{ fontSize: 12, letterSpacing: '.26em', textTransform: 'uppercase', color: '#E8B23A' }}>Praia da Gamboa</div>
           <h2 className="sec-h2" style={{ fontFamily: "'Marcellus',serif", fontSize: 38, marginTop: 8 }}>Mapa turístico da Gamboa</h2>
           <p style={{ fontSize: 15, color: 'rgba(255,255,255,.65)', maxWidth: 560, margin: '12px auto 0', fontWeight: 300 }}>
-            Os pontos que fazem da Praia da Gamboa um lugar único — do miradouro às dunas, da época das baleias a onde a Nagamboa fica.
+            Os pontos que fazem da Praia da Gamboa um lugar único: do miradouro às dunas, da época das baleias a onde a Nagamboa fica.
           </p>
         </div>
 
@@ -118,7 +118,7 @@ export default function TouristMap() {
           </div>
 
           <div style={{ background: 'rgba(16,32,74,.4)', border: '1px solid rgba(255,255,255,.1)', borderRadius: 16, overflow: 'hidden' }}>
-            <div style={{ fontFamily: "'Courier New',monospace", fontSize: 11, letterSpacing: '.24em', color: '#E8B23A', padding: '18px 18px 12px' }}>— PONTOS VIVOS</div>
+            <div style={{ fontFamily: "'Courier New',monospace", fontSize: 11, letterSpacing: '.24em', color: '#E8B23A', padding: '18px 18px 12px' }}>PONTOS VIVOS</div>
             {MAP_POINTS.map((p) => {
               const isActive = p.id === selected
               return (

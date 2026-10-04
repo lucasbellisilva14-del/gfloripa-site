@@ -3,7 +3,7 @@ import ChatWidget from "@/components/ChatWidget";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Nagamboa Imóveis — Garopaba & Praia da Gamboa",
+  title: "Nagamboa Imóveis | Garopaba e Praia da Gamboa",
   description: "Casas frente-mar, apartamentos com vista e terrenos à beira da Gamboa. Encontre seu refúgio em Garopaba, SC.",
 };
 
