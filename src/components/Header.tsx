@@ -45,10 +45,8 @@ export default function Header() {
               </Link>
             ))}
           </nav>
-          <a
-            href="https://wa.me/5548984727799"
-            target="_blank"
-            rel="noopener noreferrer"
+          <button
+            onClick={() => window.dispatchEvent(new Event('nagamboa:abrir-chat'))}
             style={{
               fontSize: 11.5,
               letterSpacing: '.12em',
@@ -60,10 +58,12 @@ export default function Header() {
               fontWeight: 500,
               cursor: 'pointer',
               whiteSpace: 'nowrap',
+              border: 'none',
+              fontFamily: "'Jost',sans-serif",
             }}
           >
             Fale conosco
-          </a>
+          </button>
         </div>
 
         <button
@@ -109,14 +109,12 @@ export default function Header() {
                 <span style={{ color: '#E8B23A' }}>→</span>
               </Link>
             ))}
-            <a
-              href="https://wa.me/5548984727799"
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: 'block', textAlign: 'center', marginTop: 24, background: '#E8B23A', color: '#0A1430', borderRadius: 12, padding: 15, fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+            <button
+              onClick={() => { setMenuOpen(false); window.dispatchEvent(new Event('nagamboa:abrir-chat')) }}
+              style={{ display: 'block', width: '100%', textAlign: 'center', marginTop: 24, background: '#E8B23A', color: '#0A1430', borderRadius: 12, padding: 15, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none', fontFamily: "'Jost',sans-serif" }}
             >
               Fale conosco
-            </a>
+            </button>
           </div>
         </div>
       )}

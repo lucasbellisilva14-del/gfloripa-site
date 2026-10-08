@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from 'react'
 type Msg = { role: 'user' | 'assistant'; content: string }
 
 const WELCOME =
-  'Olá! 👋 Sou a assistente virtual da Nagamboa Imóveis. Posso te ajudar a encontrar casas, apartamentos e terrenos em Garopaba e na Praia da Gamboa. O que você procura?'
+  'Oi! Eu sou a Lia, assistente da Nagamboa Imóveis. 👋 Posso te ajudar a encontrar casas, apartamentos e terrenos em Garopaba e na Praia da Gamboa. O que você procura?'
 
 // Converte /imovel/XXX e URLs em links clicáveis
 function renderContent(text: string) {
@@ -34,6 +34,12 @@ export default function ChatWidget() {
   useEffect(() => {
     bodyRef.current?.scrollTo({ top: bodyRef.current.scrollHeight, behavior: 'smooth' })
   }, [msgs, loading, open])
+
+  useEffect(() => {
+    const abrir = () => setOpen(true)
+    window.addEventListener('nagamboa:abrir-chat', abrir)
+    return () => window.removeEventListener('nagamboa:abrir-chat', abrir)
+  }, [])
 
   async function send() {
     const text = input.trim()
@@ -108,12 +114,16 @@ export default function ChatWidget() {
         aria-label={open ? 'Fechar chat' : 'Abrir chat'}
         style={{
           position: 'fixed', right: 22, bottom: 22, zIndex: 300,
-          width: 58, height: 58, borderRadius: '50%', border: 'none', cursor: 'pointer',
-          background: '#E8B23A', color: '#0A1430', fontSize: 26, fontWeight: 700,
+          width: 58, height: 58, borderRadius: '50%', cursor: 'pointer',
+          border: '2px solid #E8B23A', padding: 0, overflow: 'hidden',
+          background: open ? '#E8B23A' : '#0A1430', color: '#0A1430', fontSize: 26, fontWeight: 700,
           boxShadow: '0 6px 24px rgba(0,0,0,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}
       >
-        {open ? '×' : '💬'}
+        {open ? '×' : (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src="/assets/lia.webp" alt="Lia, assistente virtual" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        )}
       </button>
 
       {open && (
@@ -126,9 +136,13 @@ export default function ChatWidget() {
             boxShadow: '0 16px 48px rgba(0,0,0,.55)', fontFamily: "'Jost',sans-serif", color: '#fff',
           }}
         >
-          <div style={{ padding: '16px 18px', background: '#10204A', borderBottom: '1px solid rgba(255,255,255,.1)' }}>
-            <div style={{ fontFamily: "'Marcellus',serif", fontSize: 17 }}>Nagamboa Imóveis</div>
-            <div style={{ fontSize: 12, color: 'rgba(255,255,255,.6)' }}>Assistente virtual · Garopaba e Praia da Gamboa</div>
+          <div style={{ padding: '14px 18px', background: '#10204A', borderBottom: '1px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', gap: 12 }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/assets/lia.webp" alt="Lia" style={{ width: 42, height: 42, borderRadius: '50%', border: '1.5px solid rgba(232,178,58,.7)' }} />
+            <div>
+              <div style={{ fontFamily: "'Marcellus',serif", fontSize: 17 }}>Lia · Nagamboa Imóveis</div>
+              <div style={{ fontSize: 12, color: 'rgba(255,255,255,.6)' }}>Assistente virtual · Garopaba e Praia da Gamboa</div>
+            </div>
           </div>
 
           <div ref={bodyRef} style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
