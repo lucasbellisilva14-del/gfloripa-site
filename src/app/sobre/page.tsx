@@ -36,7 +36,7 @@ export default function SobrePage() {
     <div style={{ background: '#0A1430', minHeight: '100vh', fontFamily: "'Jost',sans-serif", color: '#fff' }}>
       <Header />
 
-      <section style={{ position: 'relative', minHeight: '52vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '80px 48px', overflow: 'hidden', background: 'url(/assets/sobre-hero.jpg) center/cover no-repeat, linear-gradient(160deg,#07112B,#0E1D48 60%,#0B2A3A)' }}>
+      <section style={{ position: 'relative', minHeight: '52vh', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '80px 48px', overflow: 'hidden', background: 'url(/assets/sobre-hero.webp) center/cover no-repeat, linear-gradient(160deg,#07112B,#0E1D48 60%,#0B2A3A)' }}>
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg, rgba(7,17,43,.62), rgba(7,17,43,.5) 45%, rgba(10,20,48,.86))' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(ellipse at 70% 20%, rgba(232,178,58,.18), transparent 55%)' }} />
         <div className="grain" />
