@@ -21,6 +21,8 @@ export type Property = {
   area_privativa: number | null
   area_util: number | null
   terreno_total: string | null
+  medida_terreno_total: string | null
+  financiavel: number | null
   medida: string
   valor_venda: number | null
   valor_locacao: number | null
@@ -113,10 +115,10 @@ async function fetchAllProperties(): Promise<Property[]> {
 
 // Cache em memória (lambda quente / dev) por cima do data cache do Next.
 let memCache: { data: Property[]; at: number } | null = null
-const MEM_TTL_MS = 2 * 60 * 1000
+const MEM_TTL_MS = 10 * 60 * 1000
 
 const getAllPropertiesCached = unstable_cache(fetchAllProperties, ['jetimob-all-properties'], {
-  revalidate: 120,
+  revalidate: 600,
 })
 
 export async function getAllProperties(): Promise<Property[]> {
@@ -133,10 +135,14 @@ export async function getActivePropertyIds(): Promise<string[]> {
 }
 
 export async function getProperty(code: string): Promise<Property | null> {
-  const res = await fetch(buildUrl(`/imoveis/codigo/${code}`), { next: { revalidate: 60 } })
+  // v=6 traz campos ausentes na versão antiga (terreno_total, medida_terreno_total)
+  // e embrulha o imóvel em { data: {...} }
+  const res = await fetch(buildUrl(`/imoveis/codigo/${code}?v=6`), { next: { revalidate: 60 } })
   if (res.status === 404) return null
   if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
-  return res.json()
+  const body = await res.json()
+  const property = body?.data ?? body
+  return property && property.codigo ? property : null
 }
 
 export const getCorretores = unstable_cache(

@@ -75,8 +75,18 @@ export async function generateMetadata({
     }
   }
 
-  const title = property.meta_title || buildTitle(property)
-  const description = property.meta_description || buildDescription(property)
+  // O painel às vezes espelha o título do anúncio em meta_title/meta_description;
+  // só valem quando foram realmente personalizados (diferentes do anúncio)
+  const metaTitleCustom =
+    property.meta_title && property.meta_title.trim() !== (property.titulo_anuncio ?? '').trim()
+      ? property.meta_title
+      : null
+  const metaDescCustom =
+    property.meta_description && property.meta_description.trim() !== (property.titulo_anuncio ?? '').trim()
+      ? property.meta_description
+      : null
+  const title = metaTitleCustom || buildTitle(property)
+  const description = metaDescCustom || buildDescription(property)
   const url = `${SITE_URL}/imovel/${property.codigo}`
   const imagem = property.imagens?.[0]?.link
 
@@ -107,7 +117,7 @@ function buildJsonLd(property: Property) {
   const jsonLd: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'RealEstateListing',
-    name: property.meta_title || property.titulo_anuncio || `Imóvel ${property.codigo}`,
+    name: property.titulo_anuncio || `Imóvel ${property.codigo}`,
     description: property.meta_description || buildDescription(property),
     url: `${SITE_URL}/imovel/${property.codigo}`,
     address: {
@@ -177,6 +187,17 @@ export default async function ImovelPage({
     { value: property.garagens > 0 ? String(property.garagens) : '-', label: 'Vagas' },
     { value: area && area > 0 ? `${area} ${property.medida ?? 'm²'}` : '-', label: 'Área' },
   ]
+
+  const terreno = parseFloat(property.terreno_total ?? '')
+  if (!Number.isNaN(terreno) && terreno > 0) {
+    specBoxes.push({
+      value: `${terreno.toLocaleString('pt-BR', { maximumFractionDigits: 0 })} ${property.medida_terreno_total ?? 'm²'}`,
+      label: 'Terreno',
+    })
+  }
+  if (property.financiavel === 1 || property.financiavel === 0) {
+    specBoxes.push({ value: property.financiavel === 1 ? 'Sim' : 'Não', label: 'Financiável' })
+  }
 
   return (
     <div style={{ background: '#0A1430', minHeight: '100vh', fontFamily: "'Jost',sans-serif", color: '#fff' }}>

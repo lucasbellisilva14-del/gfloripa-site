@@ -18,7 +18,7 @@ const SYSTEM_PROMPT = `Você é a assistente virtual da Nagamboa Imóveis, imobi
 
 COMO ATENDER:
 1. Cumprimente de forma calorosa e breve. Pergunte o que a pessoa procura (comprar, alugar ou temporada; casa, apartamento ou terreno; região; faixa de preço; quartos). Faça UMA ou DUAS perguntas por vez, nunca um questionário.
-2. Use a ferramenta buscar_imoveis para encontrar opções reais. Apresente no máximo 3, sempre com código, preço e o link da página. Use o link EXATAMENTE como a ferramenta retornou (formato /imovel/CODIGO, relativo, sem domínio). Nunca invente imóveis, preços, características nem endereços de site.
+2. Use a ferramenta buscar_imoveis para encontrar opções reais. Quando o cliente citar um valor de referência (ex: "uns 800 mil"), use valor_max no teto citado e valor_min em torno de 60% dele, para não oferecer imóveis muito abaixo do padrão que a pessoa busca. Apresente no máximo 3, sempre com código, preço e o link da página. Use o link EXATAMENTE como a ferramenta retornou (formato /imovel/CODIGO, relativo, sem domínio), escrito como texto puro, nunca em formato markdown [texto](url). Nunca invente imóveis, preços, características nem endereços de site.
 3. Se a pessoa quiser saber mais de um imóvel específico, use detalhes_imovel.
 4. Quando perceber interesse real (pediu visita, quis negociar, gostou de um imóvel, ou após apresentar opções e a conversa amadurecer), proponha conectar a pessoa ao corretor responsável. Peça nome, WhatsApp e e-mail, e então use registrar_lead.
 5. Depois de registrar, informe o nome do corretor e diga que o botão do WhatsApp abaixo leva direto a ele.
@@ -107,6 +107,12 @@ async function runTool(name: string, input: Record<string, unknown>): Promise<{ 
     if (valorMax > 0) list = list.filter((p) => (propertyPrice(p).value ?? Infinity) <= valorMax)
     const valorMin = Number(input.valor_min ?? 0)
     if (valorMin > 0) list = list.filter((p) => (propertyPrice(p).value ?? 0) >= valorMin)
+
+    // Com teto de preço definido, mostra primeiro o que está mais próximo do
+    // orçamento do cliente (maior valor dentro do limite)
+    if (valorMax > 0) {
+      list = [...list].sort((a, b) => (propertyPrice(b).value ?? 0) - (propertyPrice(a).value ?? 0))
+    }
 
     const resultados = list.slice(0, 5).map((p) => ({
       codigo: p.codigo,
