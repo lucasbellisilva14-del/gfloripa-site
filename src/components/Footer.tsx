@@ -22,7 +22,7 @@ export default function Footer() {
         <Image src="/assets/logo-white.png" alt="Nagamboa Imóveis" height={30} width={120} style={{ height: 30, width: 'auto', display: 'block' }} />
       </Link>
       <div>Garopaba · Praia da Gamboa · Ferrugem · Silveira</div>
-      <div>CRECI-SC 3314-J · © 2025 Nagamboa Imóveis</div>
+      <div>CRECI-SC 10145-J · © 2025 Nagamboa Imóveis</div>
     </footer>
   )
 }
