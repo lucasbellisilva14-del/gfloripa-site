@@ -27,6 +27,7 @@ export default function ChatWidget() {
   const [msgs, setMsgs] = useState<Msg[]>([{ role: 'assistant', content: WELCOME }])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [teaser, setTeaser] = useState(false)
   const [whatsapp, setWhatsapp] = useState<string | null>(null)
   const [corretor, setCorretor] = useState<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -40,6 +41,15 @@ export default function ChatWidget() {
     window.addEventListener('nagamboa:abrir-chat', abrir)
     return () => window.removeEventListener('nagamboa:abrir-chat', abrir)
   }, [])
+
+  useEffect(() => {
+    const t = setTimeout(() => setTeaser(true), 3500)
+    return () => clearTimeout(t)
+  }, [])
+
+  useEffect(() => {
+    if (open) setTeaser(false)
+  }, [open])
 
   async function send() {
     const text = input.trim()
@@ -108,12 +118,66 @@ export default function ChatWidget() {
 
   return (
     <>
+      <style>{`
+        @keyframes liaPulse {
+          0% { box-shadow: 0 6px 24px rgba(0,0,0,.45), 0 0 0 0 rgba(232,178,58,.55); }
+          70% { box-shadow: 0 6px 24px rgba(0,0,0,.45), 0 0 0 14px rgba(232,178,58,0); }
+          100% { box-shadow: 0 6px 24px rgba(0,0,0,.45), 0 0 0 0 rgba(232,178,58,0); }
+        }
+        @keyframes liaAcena {
+          0%, 76%, 100% { transform: rotate(0) scale(1); }
+          80% { transform: rotate(-7deg) scale(1.07); }
+          84% { transform: rotate(6deg) scale(1.07); }
+          88% { transform: rotate(-5deg) scale(1.05); }
+          92% { transform: rotate(3deg) scale(1.02); }
+        }
+        @keyframes liaConvite {
+          0% { opacity: 0; transform: translateY(14px) scale(.92); }
+          60% { opacity: 1; transform: translateY(-3px) scale(1.02); }
+          100% { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes liaFlutua {
+          0%, 100% { transform: translateY(0); }
+          50% { transform: translateY(-5px); }
+        }
+        .lia-btn { animation: liaPulse 2.6s ease-out infinite, liaAcena 5s ease-in-out infinite; }
+        .lia-convite { animation: liaConvite .5s ease-out, liaFlutua 3s ease-in-out .5s infinite; }
+      `}</style>
+
+      {/* Convite da Lia */}
+      {teaser && !open && (
+        <div
+          className="lia-convite"
+          style={{
+            position: 'fixed', right: 22, bottom: 112, zIndex: 299,
+            maxWidth: 252, background: '#10204A', border: '1px solid rgba(232,178,58,.5)',
+            borderRadius: '16px 16px 4px 16px', padding: '14px 16px',
+            boxShadow: '0 10px 32px rgba(0,0,0,.5)', fontFamily: "'Jost',sans-serif",
+          }}
+        >
+          <button
+            onClick={() => setTeaser(false)}
+            aria-label="Dispensar"
+            style={{ position: 'absolute', top: 6, right: 9, background: 'none', border: 'none', color: 'rgba(255,255,255,.55)', fontSize: 15, cursor: 'pointer', lineHeight: 1, padding: 2 }}
+          >
+            ×
+          </button>
+          <div onClick={() => setOpen(true)} style={{ cursor: 'pointer' }}>
+            <div style={{ fontSize: 13.5, color: '#fff', lineHeight: 1.45, paddingRight: 10 }}>
+              Oi! Eu sou a <strong style={{ color: '#E8B23A' }}>Lia</strong> 👋 Quer ajuda pra encontrar seu imóvel em Garopaba?
+            </div>
+            <div style={{ fontSize: 12, color: '#E8B23A', fontWeight: 600, marginTop: 7 }}>Conversar agora →</div>
+          </div>
+        </div>
+      )}
+
       {/* Balão flutuante */}
       <button
         onClick={() => setOpen((o) => !o)}
         aria-label={open ? 'Fechar chat' : 'Abrir chat'}
+        className={open ? undefined : 'lia-btn'}
         style={{
-          position: 'fixed', right: 22, bottom: 22, zIndex: 300,
+          position: 'fixed', right: 22, bottom: 40, zIndex: 300,
           width: 58, height: 58, borderRadius: '50%', cursor: 'pointer',
           border: '2px solid #E8B23A', padding: 0, overflow: 'hidden',
           background: open ? '#E8B23A' : '#0A1430', color: '#0A1430', fontSize: 26, fontWeight: 700,
@@ -129,8 +193,8 @@ export default function ChatWidget() {
       {open && (
         <div
           style={{
-            position: 'fixed', right: 22, bottom: 92, zIndex: 300,
-            width: 'min(380px, calc(100vw - 32px))', height: 'min(540px, calc(100vh - 130px))',
+            position: 'fixed', right: 22, bottom: 110, zIndex: 300,
+            width: 'min(380px, calc(100vw - 32px))', height: 'min(540px, calc(100vh - 148px))',
             background: '#0B1738', border: '1px solid rgba(255,255,255,.12)', borderRadius: 18,
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
             boxShadow: '0 16px 48px rgba(0,0,0,.55)', fontFamily: "'Jost',sans-serif", color: '#fff',
