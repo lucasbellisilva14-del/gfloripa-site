@@ -38,6 +38,9 @@ export type Property = {
   imagens: PropertyImage[]
   status: string
   id_corretor: number | null
+  data_atualizacao?: string | null
+  meta_title?: string | null
+  meta_description?: string | null
 }
 
 export type Corretor = {

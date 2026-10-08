@@ -1,5 +1,12 @@
+import type { Metadata } from 'next'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+
+export const metadata: Metadata = {
+  title: 'Sobre a Nagamboa Imóveis | Especialistas na Praia da Gamboa',
+  description: 'Conheça a Nagamboa Imóveis: mais de 15 anos ajudando famílias a comprar, vender e alugar imóveis em Garopaba e na Praia da Gamboa, em Santa Catarina.',
+  alternates: { canonical: '/sobre' },
+}
 
 const valores = [
   { titulo: 'Transparência', desc: 'Informações claras, sem surpresas. Do primeiro contato ao fechamento, você sabe exatamente o que está acontecendo.' },

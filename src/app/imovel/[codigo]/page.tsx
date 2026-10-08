@@ -1,9 +1,12 @@
+import type { Metadata } from 'next'
 import Link from 'next/link'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Gallery from '@/components/Gallery'
 import InterestForm from '@/components/InterestForm'
-import { getProperty, formatPrice } from '@/lib/jetimob'
+import { getProperty, formatPrice, type Property } from '@/lib/jetimob'
+
+const SITE_URL = 'https://www.nagamboaimoveis.com.br'
 
 function getContrato(contrato: string): string {
   if (!contrato) return ''
@@ -21,6 +24,120 @@ function getPrecoFormatted(property: { contrato: string; valor_venda: number | n
   }
   if (contrato === 'Temporada') return property.valor_temporada ? formatPrice(property.valor_temporada) + ' / diária' : 'Consulte'
   return property.valor_locacao ? formatPrice(property.valor_locacao) + ' / mês' : 'Consulte'
+}
+
+// Monta o title da página quando o painel não tem meta_title preenchido.
+// Exemplo: "Casa 3 quartos em Gamboa, R$ 980.000 | Nagamboa Imóveis"
+function buildTitle(property: Property): string {
+  const tipo = property.subtipo || property.tipo || 'Imóvel'
+  const partes: string[] = [tipo]
+  if (property.dormitorios > 0) {
+    partes.push(`${property.dormitorios} ${property.dormitorios === 1 ? 'quarto' : 'quartos'}`)
+  }
+  let texto = partes.join(' ')
+  if (property.endereco_bairro) texto += ` em ${property.endereco_bairro}`
+  else if (property.endereco_cidade) texto += ` em ${property.endereco_cidade}`
+  if (property.valor_venda_visivel && property.valor_venda) {
+    texto += `, ${formatPrice(property.valor_venda)}`
+  }
+  return `${texto} | Nagamboa Imóveis`
+}
+
+// Primeira frase das observações, sem quebras de linha nem travessões,
+// limitada a ~155 caracteres para caber na SERP.
+function buildDescription(property: Property): string {
+  const texto = (property.observacoes || '')
+    .replace(/[—–]/g, ',')
+    .replace(/\s+/g, ' ')
+    .trim()
+  if (!texto) {
+    const local = [property.endereco_bairro, property.endereco_cidade].filter(Boolean).join(', ')
+    return `${property.titulo_anuncio || 'Imóvel'}${local ? ` em ${local}` : ''}. Fale com a Nagamboa Imóveis.`
+  }
+  const fimDaFrase = texto.search(/[.!?](\s|$)/)
+  const frase = fimDaFrase > 20 ? texto.slice(0, fimDaFrase + 1) : texto
+  if (frase.length <= 155) return frase
+  return frase.slice(0, 152).trimEnd() + '...'
+}
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ codigo: string }>
+}): Promise<Metadata> {
+  const { codigo } = await params
+  const property = await getProperty(codigo).catch(() => null)
+
+  if (!property) {
+    return {
+      title: 'Imóvel não disponível | Nagamboa Imóveis',
+      robots: { index: false, follow: false },
+    }
+  }
+
+  const title = property.meta_title || buildTitle(property)
+  const description = property.meta_description || buildDescription(property)
+  const url = `${SITE_URL}/imovel/${property.codigo}`
+  const imagem = property.imagens?.[0]?.link
+
+  return {
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website',
+      siteName: 'Nagamboa Imóveis',
+      locale: 'pt_BR',
+      images: imagem ? [{ url: imagem, alt: property.titulo_anuncio || title }] : undefined,
+    },
+    twitter: {
+      card: imagem ? 'summary_large_image' : 'summary',
+      title,
+      description,
+      images: imagem ? [imagem] : undefined,
+    },
+  }
+}
+
+// JSON-LD Schema.org do imóvel para resultados enriquecidos.
+function buildJsonLd(property: Property) {
+  const jsonLd: Record<string, unknown> = {
+    '@context': 'https://schema.org',
+    '@type': 'RealEstateListing',
+    name: property.meta_title || property.titulo_anuncio || `Imóvel ${property.codigo}`,
+    description: property.meta_description || buildDescription(property),
+    url: `${SITE_URL}/imovel/${property.codigo}`,
+    address: {
+      '@type': 'PostalAddress',
+      addressLocality: property.endereco_cidade || 'Garopaba',
+      addressRegion: property.endereco_estado || 'Santa Catarina',
+      addressCountry: 'BR',
+      ...(property.endereco_bairro ? { streetAddress: property.endereco_bairro } : {}),
+    },
+  }
+  if (property.imagens?.length) {
+    jsonLd.image = property.imagens.slice(0, 5).map((img) => img.link).filter(Boolean)
+  }
+  if (property.latitude && property.longitude) {
+    jsonLd.geo = {
+      '@type': 'GeoCoordinates',
+      latitude: property.latitude,
+      longitude: property.longitude,
+    }
+  }
+  if (property.valor_venda_visivel && property.valor_venda) {
+    jsonLd.offers = {
+      '@type': 'Offer',
+      price: property.valor_venda,
+      priceCurrency: 'BRL',
+      availability: 'https://schema.org/InStock',
+      url: `${SITE_URL}/imovel/${property.codigo}`,
+    }
+  }
+  return jsonLd
 }
 
 export default async function ImovelPage({
@@ -63,6 +180,10 @@ export default async function ImovelPage({
 
   return (
     <div style={{ background: '#0A1430', minHeight: '100vh', fontFamily: "'Jost',sans-serif", color: '#fff' }}>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(buildJsonLd(property)) }}
+      />
       <Header />
 
       <div className="sect" style={{ background: '#0A1430', padding: '24px 48px 80px' }}>
