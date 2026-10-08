@@ -48,19 +48,53 @@ export default function ChatWidget() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: next }),
       })
-      const data = await res.json().catch(() => null)
-      if (res.ok && data?.reply) {
-        setMsgs((m) => [...m, { role: 'assistant', content: data.reply }])
-        if (data.whatsapp) setWhatsapp(data.whatsapp)
-        if (data.corretor) setCorretor(data.corretor)
-      } else {
-        setMsgs((m) => [
-          ...m,
-          { role: 'assistant', content: 'Estou com dificuldade técnica agora. Você pode falar direto com a gente no WhatsApp pelo botão "Fale conosco" ali em cima. 🙏' },
-        ])
+      if (!res.ok || !res.body) throw new Error('indisponível')
+
+      // Resposta em NDJSON streaming: monta a mensagem da assistente ao vivo
+      setMsgs((m) => [...m, { role: 'assistant', content: '' }])
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let got = false
+      for (;;) {
+        const { done, value } = await reader.read()
+        if (done) break
+        buffer += decoder.decode(value, { stream: true })
+        const lines = buffer.split('\n')
+        buffer = lines.pop() ?? ''
+        for (const line of lines) {
+          if (!line.trim()) continue
+          let ev: { t: string; v?: string; whatsapp?: string | null; corretor?: string | null }
+          try {
+            ev = JSON.parse(line)
+          } catch {
+            continue
+          }
+          if (ev.t === 'd' && ev.v) {
+            got = true
+            setMsgs((m) => {
+              const copy = [...m]
+              const last = copy[copy.length - 1]
+              copy[copy.length - 1] = { ...last, content: last.content + ev.v }
+              return copy
+            })
+          } else if (ev.t === 'end') {
+            if (ev.whatsapp) setWhatsapp(ev.whatsapp)
+            if (ev.corretor) setCorretor(ev.corretor)
+          } else if (ev.t === 'err') {
+            throw new Error('erro no servidor')
+          }
+        }
       }
+      if (!got) throw new Error('resposta vazia')
     } catch {
-      setMsgs((m) => [...m, { role: 'assistant', content: 'Falha de conexão. Pode tentar de novo?' }])
+      setMsgs((m) => {
+        const copy = m[m.length - 1]?.role === 'assistant' && m[m.length - 1].content === '' ? m.slice(0, -1) : m
+        return [
+          ...copy,
+          { role: 'assistant', content: 'Estou com dificuldade técnica agora. Você pode falar direto com a gente no WhatsApp pelo botão "Fale conosco" ali em cima. 🙏' },
+        ]
+      })
     } finally {
       setLoading(false)
     }
@@ -98,7 +132,7 @@ export default function ChatWidget() {
           </div>
 
           <div ref={bodyRef} style={{ flex: 1, overflowY: 'auto', padding: 16, display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {msgs.map((m, i) => (
+            {msgs.filter((m) => m.content !== '').map((m, i) => (
               <div
                 key={i}
                 style={{

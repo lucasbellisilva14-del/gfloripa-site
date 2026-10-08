@@ -195,6 +195,92 @@ type AnthropicContent =
   | { type: 'text'; text: string }
   | { type: 'tool_use'; id: string; name: string; input: Record<string, unknown> }
 
+// Chama a Anthropic em modo streaming. Emite cada trecho de texto via onText
+// e devolve o conteúdo completo do turno (texto + tool_use) e o stop_reason.
+async function anthropicStreamTurn(
+  apiKey: string,
+  messages: { role: 'user' | 'assistant'; content: string | unknown[] }[],
+  onText: (delta: string) => void
+): Promise<{ content: AnthropicContent[]; stop_reason: string }> {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 1024,
+      stream: true,
+      // cache_control: o prefixo estável (tools + system) fica em cache na
+      // Anthropic, reduzindo o custo de entrada das mensagens seguintes
+      system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
+      tools,
+      messages,
+    }),
+  })
+  if (!res.ok || !res.body) {
+    throw new Error(`Anthropic API ${res.status}: ${await res.text().catch(() => '')}`)
+  }
+
+  const content: AnthropicContent[] = []
+  // acumula o JSON parcial dos inputs de tool_use por índice de bloco
+  const partialJson: Record<number, string> = {}
+  let stopReason = 'end_turn'
+
+  const reader = res.body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() ?? ''
+    for (const line of lines) {
+      if (!line.startsWith('data:')) continue
+      let event: Record<string, unknown>
+      try {
+        event = JSON.parse(line.slice(5))
+      } catch {
+        continue
+      }
+      const type = event.type as string
+      if (type === 'content_block_start') {
+        const idx = event.index as number
+        const block = event.content_block as AnthropicContent
+        content[idx] = block.type === 'tool_use' ? { ...block, input: {} } : { type: 'text', text: '' }
+        if (block.type === 'tool_use') partialJson[idx] = ''
+      } else if (type === 'content_block_delta') {
+        const idx = event.index as number
+        const delta = event.delta as { type: string; text?: string; partial_json?: string }
+        if (delta.type === 'text_delta' && delta.text) {
+          const blk = content[idx]
+          if (blk?.type === 'text') blk.text += delta.text
+          onText(delta.text)
+        } else if (delta.type === 'input_json_delta' && delta.partial_json !== undefined) {
+          partialJson[idx] = (partialJson[idx] ?? '') + delta.partial_json
+        }
+      } else if (type === 'content_block_stop') {
+        const idx = event.index as number
+        const blk = content[idx]
+        if (blk?.type === 'tool_use') {
+          try {
+            blk.input = partialJson[idx] ? JSON.parse(partialJson[idx]) : {}
+          } catch {
+            blk.input = {}
+          }
+        }
+      } else if (type === 'message_delta') {
+        const delta = event.delta as { stop_reason?: string }
+        if (delta?.stop_reason) stopReason = delta.stop_reason
+      }
+    }
+  }
+  return { content: content.filter(Boolean), stop_reason: stopReason }
+}
+
 export async function POST(request: NextRequest) {
   const apiKey = process.env.ANTHROPIC_API_KEY
   if (!apiKey) {
@@ -218,57 +304,54 @@ export async function POST(request: NextRequest) {
   }
 
   const messages: { role: 'user' | 'assistant'; content: string | unknown[] }[] = [...history]
-  let whatsapp: string | undefined
-  let corretor: string | undefined
+  const encoder = new TextEncoder()
 
-  try {
-    for (let round = 0; round < 5; round++) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: {
-          'content-type': 'application/json',
-          'x-api-key': apiKey,
-          'anthropic-version': '2023-06-01',
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          max_tokens: 1024,
-          // cache_control: o prefixo estável (tools + system) fica em cache na
-          // Anthropic, reduzindo o custo de entrada das mensagens seguintes
-          system: [{ type: 'text', text: SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
-          tools,
-          messages,
-        }),
-      })
-      if (!res.ok) {
-        console.error('Chat: Anthropic API', res.status, await res.text().catch(() => ''))
-        return Response.json({ error: 'Chat indisponível no momento' }, { status: 502 })
-      }
-      const data = (await res.json()) as { content: AnthropicContent[]; stop_reason: string }
+  // Resposta em NDJSON streaming: {t:'d',v:texto} para cada trecho,
+  // {t:'end',whatsapp,corretor} ao final. O widget monta a mensagem ao vivo.
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (obj: Record<string, unknown>) =>
+        controller.enqueue(encoder.encode(JSON.stringify(obj) + '\n'))
+      let whatsapp: string | undefined
+      let corretor: string | undefined
+      try {
+        for (let round = 0; round < 5; round++) {
+          const turn = await anthropicStreamTurn(apiKey, messages, (delta) => send({ t: 'd', v: delta }))
 
-      if (data.stop_reason !== 'tool_use') {
-        const reply = data.content
-          .filter((c): c is Extract<AnthropicContent, { type: 'text' }> => c.type === 'text')
-          .map((c) => c.text)
-          .join('\n')
-          .trim()
-        return Response.json({ reply: reply || 'Desculpe, não consegui responder. Pode repetir?', whatsapp, corretor })
-      }
+          if (turn.stop_reason !== 'tool_use') {
+            send({ t: 'end', whatsapp: whatsapp ?? null, corretor: corretor ?? null })
+            controller.close()
+            return
+          }
 
-      messages.push({ role: 'assistant', content: data.content })
-      const toolResults = []
-      for (const block of data.content) {
-        if (block.type !== 'tool_use') continue
-        const { result, whatsapp: w, corretor: c } = await runTool(block.name, block.input)
-        if (w) whatsapp = w
-        if (c) corretor = c
-        toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) })
+          messages.push({ role: 'assistant', content: turn.content })
+          const toolResults = []
+          for (const block of turn.content) {
+            if (block.type !== 'tool_use') continue
+            const { result, whatsapp: w, corretor: c } = await runTool(block.name, block.input)
+            if (w) whatsapp = w
+            if (c) corretor = c
+            toolResults.push({ type: 'tool_result', tool_use_id: block.id, content: JSON.stringify(result) })
+          }
+          messages.push({ role: 'user', content: toolResults })
+          // separa visualmente o texto pré-busca da resposta final
+          send({ t: 'd', v: '\n' })
+        }
+        send({ t: 'd', v: 'Desculpe, tive um problema aqui. Pode tentar de novo?' })
+        send({ t: 'end', whatsapp: whatsapp ?? null, corretor: corretor ?? null })
+        controller.close()
+      } catch (err) {
+        console.error('Chat: erro no streaming:', err)
+        send({ t: 'err' })
+        controller.close()
       }
-      messages.push({ role: 'user', content: toolResults })
-    }
-    return Response.json({ reply: 'Desculpe, tive um problema aqui. Pode tentar de novo?', whatsapp, corretor })
-  } catch (err) {
-    console.error('Chat: erro inesperado:', err)
-    return Response.json({ error: 'Chat indisponível no momento' }, { status: 500 })
-  }
+    },
+  })
+
+  return new Response(stream, {
+    headers: {
+      'content-type': 'application/x-ndjson; charset=utf-8',
+      'cache-control': 'no-cache',
+    },
+  })
 }
