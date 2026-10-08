@@ -193,8 +193,12 @@ export async function createLead(input: LeadInput): Promise<void> {
   const form = new FormData()
   form.set('full_name', input.full_name)
   form.set('email', input.email)
-  form.set('phone', input.phone)
+  // só dígitos, sem DDI: evita variantes do mesmo número no contato do CRM
+  form.set('phone', input.phone.replace(/\D/g, '').replace(/^55(?=\d{10,11}$)/, ''))
   form.set('source', 'Site Nagamboa')
+  // Origem oficial do painel (app.jetimob.com/origens); sem ela o lead fica sem origem no CRM
+  const origemId = process.env.JETIMOB_LEAD_ORIGEM_ID
+  if (origemId) form.set('prospecting_supply_id', origemId)
   if (input.message) form.set('message', input.message)
   if (input.property_code) form.set('property_code', input.property_code)
   if (input.responsible) form.set('responsible', input.responsible)
