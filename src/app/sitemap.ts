@@ -1,5 +1,5 @@
 import type { MetadataRoute } from 'next'
-import { getAllProperties, type Property } from '@/lib/jetimob'
+import { getAllProperties, getEmpreendimentos, type Property } from '@/lib/jetimob'
 
 const SITE_URL = 'https://www.nagamboaimoveis.com.br'
 
@@ -18,6 +18,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: SITE_URL, lastModified: new Date(), changeFrequency: 'daily', priority: 1 },
     { url: `${SITE_URL}/imoveis`, lastModified: new Date(), changeFrequency: 'daily', priority: 0.9 },
     { url: `${SITE_URL}/sobre`, lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
+    { url: `${SITE_URL}/empreendimentos`, lastModified: new Date(), changeFrequency: 'weekly', priority: 0.8 },
   ]
 
   let properties: Property[] = []
@@ -34,5 +35,17 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  return [...fixas, ...imoveis]
+  let empreendimentos: MetadataRoute.Sitemap = []
+  try {
+    empreendimentos = (await getEmpreendimentos()).map((c) => ({
+      url: `${SITE_URL}/empreendimento/${c.codigo}`,
+      lastModified: new Date(),
+      changeFrequency: 'weekly' as const,
+      priority: 0.7,
+    }))
+  } catch {
+    empreendimentos = []
+  }
+
+  return [...fixas, ...empreendimentos, ...imoveis]
 }

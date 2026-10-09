@@ -8,10 +8,10 @@ export default function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
 
   const navLinks = [
-    { label: 'Comprar', href: '/venda' },
-    { label: 'Alugar', href: '/alugar' },
-    { label: 'Temporada', href: '/temporada' },
-    { label: 'Lançamentos', href: '/lancamentos' },
+    { label: 'Comprar', href: '/imoveis?contrato=compra' },
+    { label: 'Alugar', href: '/imoveis?contrato=aluguel' },
+    { label: 'Temporada', href: '/imoveis?contrato=temporada' },
+    { label: 'Lançamentos', href: '/empreendimentos' },
     { label: 'Imóveis', href: '/imoveis' },
     { label: 'Sobre', href: '/sobre' },
   ]

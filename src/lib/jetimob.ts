@@ -40,9 +40,31 @@ export type Property = {
   imagens: PropertyImage[]
   status: string
   id_corretor: number | null
+  id_condominio?: number | null
   data_atualizacao?: string | null
   meta_title?: string | null
   meta_description?: string | null
+}
+
+export type Condominio = {
+  codigo: number
+  id_condominio: number
+  nome: string
+  tipo: string | null
+  situacao: string | null
+  lancamento: boolean
+  fechado: boolean | null
+  entrega_mes: number | string | null
+  entrega_ano: number | string | null
+  endereco_bairro: string | null
+  endereco_cidade: string | null
+  endereco_estado: string | null
+  total_imoveis_disponiveis: number | null
+  imagens: { link: string; titulo: string }[] | null
+  observacoes: string | null
+  infraestruturas: string | null
+  construtora: string | null
+  incorporadora: string | null
 }
 
 export type Corretor = {
@@ -143,6 +165,38 @@ export async function getProperty(code: string): Promise<Property | null> {
   const body = await res.json()
   const property = body?.data ?? body
   return property && property.codigo ? property : null
+}
+
+export const getCondominios = unstable_cache(
+  async (): Promise<Condominio[]> => {
+    const res = await fetch(buildUrl('/condominios?v=6&pageSize=500'))
+    if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
+    const body = await res.json()
+    return body?.data ?? body ?? []
+  },
+  ['jetimob-condominios'],
+  { revalidate: 600 }
+)
+
+// Empreendimentos para a vitrine: em lançamento, na planta ou em construção,
+// com unidades disponíveis. Lançamentos e "na planta" primeiro.
+export async function getEmpreendimentos(): Promise<Condominio[]> {
+  const todos = await getCondominios()
+  return todos
+    .filter(
+      (c) =>
+        (c.total_imoveis_disponiveis ?? 0) > 0 &&
+        (c.lancamento || c.situacao === 'Em construção' || c.situacao === 'Na planta')
+    )
+    .sort((a, b) => {
+      const peso = (c: Condominio) => (c.situacao === 'Na planta' ? 0 : c.lancamento ? 1 : 2)
+      return peso(a) - peso(b) || (b.total_imoveis_disponiveis ?? 0) - (a.total_imoveis_disponiveis ?? 0)
+    })
+}
+
+export async function getCondominioByCodigo(codigo: string): Promise<Condominio | null> {
+  const todos = await getCondominios()
+  return todos.find((c) => String(c.codigo) === codigo || String(c.id_condominio) === codigo) ?? null
 }
 
 export const getCorretores = unstable_cache(
