@@ -325,6 +325,10 @@ export async function POST(request: NextRequest) {
           }
 
           messages.push({ role: 'assistant', content: turn.content })
+          // avisa o widget que uma busca demorada começou (só buscas)
+          if (turn.content.some((b) => b.type === 'tool_use' && b.name === 'buscar_imoveis')) {
+            send({ t: 'busca' })
+          }
           const toolResults = []
           for (const block of turn.content) {
             if (block.type !== 'tool_use') continue

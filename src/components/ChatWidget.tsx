@@ -28,6 +28,7 @@ export default function ChatWidget() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
   const [teaser, setTeaser] = useState(false)
+  const [buscando, setBuscando] = useState(false)
   const [whatsapp, setWhatsapp] = useState<string | null>(null)
   const [corretor, setCorretor] = useState<string | null>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
@@ -86,8 +87,11 @@ export default function ChatWidget() {
           } catch {
             continue
           }
-          if (ev.t === 'd' && ev.v) {
+          if (ev.t === 'busca') {
+            setBuscando(true)
+          } else if (ev.t === 'd' && ev.v) {
             got = true
+            setBuscando(false)
             setMsgs((m) => {
               const copy = [...m]
               const last = copy[copy.length - 1]
@@ -113,6 +117,7 @@ export default function ChatWidget() {
       })
     } finally {
       setLoading(false)
+      setBuscando(false)
     }
   }
 
@@ -140,6 +145,7 @@ export default function ChatWidget() {
           0%, 100% { transform: translateY(0); }
           50% { transform: translateY(-5px); }
         }
+        @keyframes liaGira { to { transform: rotate(360deg); } }
         .lia-btn { animation: liaPulse 2.6s ease-out infinite, liaAcena 5s ease-in-out infinite; }
         .lia-convite { animation: liaConvite .5s ease-out, liaFlutua 3s ease-in-out .5s infinite; }
       `}</style>
@@ -224,9 +230,15 @@ export default function ChatWidget() {
                 {renderContent(m.content)}
               </div>
             ))}
-            {loading && (
+            {loading && !buscando && (
               <div style={{ alignSelf: 'flex-start', padding: '10px 14px', borderRadius: 14, background: '#16265C', fontSize: 14, color: 'rgba(255,255,255,.7)' }}>
                 digitando…
+              </div>
+            )}
+            {buscando && (
+              <div style={{ alignSelf: 'flex-start', padding: '11px 14px', borderRadius: 14, background: '#16265C', border: '1px solid rgba(232,178,58,.35)', fontSize: 13, color: 'rgba(255,255,255,.8)', display: 'flex', alignItems: 'center', gap: 9 }}>
+                <span style={{ width: 13, height: 13, borderRadius: '50%', border: '2px solid rgba(232,178,58,.35)', borderTopColor: '#E8B23A', animation: 'liaGira .9s linear infinite', flexShrink: 0 }} />
+                <span>Buscando no nosso portfólio… essa busca leva em média 30 segundos 🙏</span>
               </div>
             )}
             {whatsapp && (
