@@ -5,7 +5,7 @@ import Footer from '@/components/Footer'
 import Gallery from '@/components/Gallery'
 import PropertyCard from '@/components/PropertyCard'
 import FaleComLia from '@/components/FaleComLia'
-import { getCondominioByCodigo, getAllProperties, type Condominio, type Property } from '@/lib/jetimob'
+import { getCondominioByCodigo, getUnidadesDoEmpreendimento, type Condominio, type Property } from '@/lib/jetimob'
 
 const SITE_URL = 'https://www.nagamboaimoveis.com.br'
 
@@ -62,8 +62,7 @@ export default async function EmpreendimentoPage({ params }: { params: Promise<{
 
   let unidades: Property[] = []
   try {
-    const todas = await getAllProperties()
-    unidades = todas.filter((p) => p.id_condominio === condominio.id_condominio)
+    unidades = await getUnidadesDoEmpreendimento(condominio)
   } catch {
     unidades = []
   }

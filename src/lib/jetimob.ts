@@ -41,6 +41,7 @@ export type Property = {
   status: string
   id_corretor: number | null
   id_condominio?: number | null
+  condominio_nome?: string | null
   data_atualizacao?: string | null
   meta_title?: string | null
   meta_description?: string | null
@@ -117,7 +118,7 @@ export async function getProperties(params?: {
 function slimProperty(p: Property): Property {
   return {
     ...p,
-    observacoes: '',
+    observacoes: (p.observacoes ?? '').slice(0, 300),
     imagens: p.imagens?.length ? [p.imagens[0]] : [],
   }
 }
@@ -207,6 +208,32 @@ function ordem(c: Condominio): number {
 function recencia(c: Condominio & { data_cadastro?: string | null }): number {
   const d = new Date(String(c.data_cadastro ?? '').replace(' ', 'T'))
   return Number.isNaN(d.getTime()) ? 0 : d.getTime()
+}
+
+function normalizar(s: string | null | undefined): string {
+  return (s ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+}
+
+// Unidades de um empreendimento: usa o vínculo do painel (id_condominio /
+// condominio_nome) e completa com heurística, já que a maioria dos anúncios
+// não é vinculada ao condomínio no cadastro: nome completo citado no anúncio,
+// ou núcleo do nome citado em anúncio do mesmo bairro.
+export async function getUnidadesDoEmpreendimento(c: Condominio): Promise<Property[]> {
+  const todas = await getAllProperties()
+  const nome = normalizar(c.nome)
+  let nucleo = nome
+  for (const pref of ['loteamento ', 'residencial ', 'condominio ']) {
+    if (nucleo.startsWith(pref)) nucleo = nucleo.slice(pref.length)
+  }
+  const bairro = normalizar(c.endereco_bairro)
+  return todas.filter((p) => {
+    if (p.id_condominio && p.id_condominio === c.id_condominio) return true
+    if (p.condominio_nome && normalizar(p.condominio_nome) === nome) return true
+    const texto = `${normalizar(p.titulo_anuncio)} ${normalizar(p.observacoes)}`
+    if (texto.includes(nome)) return true
+    if (nucleo.length >= 6 && bairro && texto.includes(nucleo) && normalizar(p.endereco_bairro) === bairro) return true
+    return false
+  })
 }
 
 export async function getCondominioByCodigo(codigo: string): Promise<Condominio | null> {
