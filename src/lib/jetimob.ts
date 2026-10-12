@@ -188,10 +188,25 @@ export async function getEmpreendimentos(): Promise<Condominio[]> {
         (c.total_imoveis_disponiveis ?? 0) > 0 &&
         (c.lancamento || c.situacao === 'Em construção' || c.situacao === 'Na planta')
     )
-    .sort((a, b) => {
-      const peso = (c: Condominio) => (c.situacao === 'Na planta' ? 0 : c.lancamento ? 1 : 2)
-      return peso(a) - peso(b) || (b.total_imoveis_disponiveis ?? 0) - (a.total_imoveis_disponiveis ?? 0)
-    })
+    .sort((a, b) => ordem(a) - ordem(b) || recencia(b) - recencia(a))
+}
+
+// Ordenação da vitrine: carro-chefe primeiro, depois Garopaba, depois as
+// cidades vizinhas; as mais distantes ficam por último mas permanecem na
+// lista. Dentro de cada grupo, os cadastrados mais recentemente primeiro.
+const CARRO_CHEFE_ID = 386780 // Loteamento Mares de Garopaba
+
+function ordem(c: Condominio): number {
+  if (c.codigo === CARRO_CHEFE_ID || c.id_condominio === CARRO_CHEFE_ID) return 0
+  const cidade = (c.endereco_cidade ?? '').toLowerCase()
+  if (cidade.includes('garopaba')) return 1
+  if (cidade.includes('paulo lopes') || cidade.includes('imbituba')) return 2
+  return 3
+}
+
+function recencia(c: Condominio & { data_cadastro?: string | null }): number {
+  const d = new Date(String(c.data_cadastro ?? '').replace(' ', 'T'))
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime()
 }
 
 export async function getCondominioByCodigo(codigo: string): Promise<Condominio | null> {
