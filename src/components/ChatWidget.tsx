@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { trackLead, trackWhatsapp } from '@/lib/gtag'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
 
@@ -99,7 +100,10 @@ export default function ChatWidget() {
               return copy
             })
           } else if (ev.t === 'end') {
-            if (ev.whatsapp) setWhatsapp(ev.whatsapp)
+            if (ev.whatsapp) {
+              setWhatsapp(ev.whatsapp)
+              trackLead('lia')
+            }
             if (ev.corretor) setCorretor(ev.corretor)
           } else if (ev.t === 'err') {
             throw new Error('erro no servidor')
@@ -246,6 +250,7 @@ export default function ChatWidget() {
                 href={`https://wa.me/${whatsapp}?text=${encodeURIComponent('Olá! Acabei de falar com a assistente do site da Nagamboa.')}`}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={() => trackWhatsapp('lia')}
                 style={{
                   alignSelf: 'center', marginTop: 4, background: '#25D366', color: '#07301c',
                   borderRadius: 30, padding: '12px 20px', fontSize: 14, fontWeight: 600, textDecoration: 'none',

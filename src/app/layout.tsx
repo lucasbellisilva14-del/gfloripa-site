@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import ChatWidget from "@/components/ChatWidget";
+import { ADS_ID } from "@/lib/gtag";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -51,6 +53,13 @@ export default function RootLayout({
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(realEstateAgentJsonLd) }}
         />
+        <Script src={`https://www.googletagmanager.com/gtag/js?id=${ADS_ID}`} strategy="afterInteractive" />
+        <Script id="gtag-init" strategy="afterInteractive">
+          {`window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', '${ADS_ID}');`}
+        </Script>
         {children}
         <ChatWidget />
       </body>

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { trackLead, trackWhatsapp } from '@/lib/gtag'
 
 type Props = {
   codigo: string
@@ -64,10 +65,12 @@ export default function InterestForm({ codigo, titulo }: Props) {
       }
       const data = await res.json().catch(() => null)
       if (data?.whatsapp) whatsapp = data.whatsapp
+      trackLead('formulario', codigo)
     } catch {
       // mesmo sem o CRM, segue para o WhatsApp
     }
 
+    trackWhatsapp('formulario')
     const texto =
       open === 'visita'
         ? `Olá! Sou ${nome} e gostaria de agendar uma visita ao imóvel ${codigo} (${titulo}).`
