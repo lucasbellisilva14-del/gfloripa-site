@@ -13,6 +13,7 @@ export const metadata: Metadata = {
     title: "Nagamboa Imóveis | Garopaba e Praia da Gamboa",
     description: "Casas frente-mar, apartamentos com vista e terrenos à beira da Gamboa. Encontre seu refúgio em Garopaba, SC.",
     url: "/",
+    images: [{ url: "/assets/sobre-hero.webp", width: 1920, height: 1080, alt: "Praia da Gamboa, Garopaba" }],
   },
 };
 
