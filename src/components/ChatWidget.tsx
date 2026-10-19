@@ -168,7 +168,7 @@ export default function ChatWidget() {
       {/* Convite da Lia */}
       {teaser && !open && (
         <div
-          className="lia-convite"
+          className="lia-convite lia-teaser"
           style={{
             position: 'fixed', right: 22, bottom: 112, zIndex: 299,
             maxWidth: 252, background: '#10204A', border: '1px solid rgba(232,178,58,.5)',
@@ -199,7 +199,7 @@ export default function ChatWidget() {
           setOpen((o) => !o)
         }}
         aria-label={open ? 'Fechar chat' : 'Abrir chat'}
-        className={open ? undefined : 'lia-btn'}
+        className={'lia-fab' + (open ? '' : ' lia-btn')}
         style={{
           position: 'fixed', right: 22, bottom: 40, zIndex: 300,
           width: 58, height: 58, borderRadius: '50%', cursor: 'pointer',
@@ -216,6 +216,7 @@ export default function ChatWidget() {
 
       {open && (
         <div
+          className="lia-panel"
           style={{
             position: 'fixed', right: 22, bottom: 110, zIndex: 300,
             width: 'min(380px, calc(100vw - 32px))', height: 'min(540px, calc(100dvh - 148px))',

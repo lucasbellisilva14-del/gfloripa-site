@@ -46,6 +46,10 @@ button { font-family: inherit; }
   .bento > * { grid-column:auto !important;grid-row:auto !important;min-height:180px !important }
   .three-col { grid-template-columns:1fr !important }
   .bottomnav { display:flex !important }
+  /* a bottomnav tem 64px; a Lia sobe para não tampar o botão Menu */
+  .lia-fab { bottom:78px !important }
+  .lia-teaser { bottom:150px !important }
+  .lia-panel { bottom:148px !important;height:min(540px, calc(100dvh - 186px)) !important }
   .m-burger { display:flex !important }
   /* iOS Safari dá zoom automático ao focar campos com fonte menor que 16px
      e nem sempre volta ao normal; 16px evita o zoom sem bloquear o do usuário */
