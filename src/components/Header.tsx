@@ -138,19 +138,19 @@ export default function Header() {
       >
         <Link href="/" style={{ textAlign: 'center', cursor: 'pointer', color: '#fff' }}>
           <div style={{ fontSize: 19 }}>⌂</div>
-          <div style={{ fontSize: 9.5, marginTop: 2 }}>Início</div>
+          <div style={{ fontSize: 11, marginTop: 2 }}>Início</div>
         </Link>
         <Link href="/imoveis" style={{ textAlign: 'center', cursor: 'pointer', color: 'rgba(255,255,255,.55)' }}>
           <div style={{ fontSize: 19 }}>⌕</div>
-          <div style={{ fontSize: 9.5, marginTop: 2 }}>Buscar</div>
+          <div style={{ fontSize: 11, marginTop: 2 }}>Buscar</div>
         </Link>
         <Link href="/imoveis" style={{ textAlign: 'center', cursor: 'pointer', color: 'rgba(255,255,255,.55)' }}>
           <div style={{ fontSize: 19 }}>▦</div>
-          <div style={{ fontSize: 9.5, marginTop: 2 }}>Imóveis</div>
+          <div style={{ fontSize: 11, marginTop: 2 }}>Imóveis</div>
         </Link>
         <button onClick={() => setMenuOpen(true)} style={{ textAlign: 'center', cursor: 'pointer', color: 'rgba(255,255,255,.55)', background: 'none', border: 'none' }}>
           <div style={{ fontSize: 19 }}>≡</div>
-          <div style={{ fontSize: 9.5, marginTop: 2 }}>Menu</div>
+          <div style={{ fontSize: 11, marginTop: 2 }}>Menu</div>
         </button>
       </div>
     </>

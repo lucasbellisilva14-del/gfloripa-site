@@ -52,7 +52,7 @@ export default function PropertyCard({ property }: { property: Property }) {
         )}
         <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,transparent 45%,rgba(10,20,48,.85))' }} />
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 82% 16%, rgba(232,178,58,.32), transparent 40%)' }} />
-        <span style={{ position: 'absolute', left: 16, top: 16, background: 'rgba(232,178,58,.95)', color: '#0A1430', fontSize: 10.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '6px 12px', borderRadius: 30, fontWeight: 600 }}>
+        <span style={{ position: 'absolute', left: 16, top: 16, background: 'rgba(232,178,58,.95)', color: '#0A1430', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', padding: '6px 12px', borderRadius: 30, fontWeight: 600 }}>
           {contratoLabel}
         </span>
         <span style={{ position: 'absolute', right: 16, top: 16, color: 'rgba(255,255,255,.8)', fontSize: 11 }}>{property.codigo}</span>

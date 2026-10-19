@@ -1,8 +1,15 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import ChatWidget from "@/components/ChatWidget";
 import { ADS_ID } from "@/lib/gtag";
 import "./globals.css";
+
+// Viewport explícita (sem maximum-scale nem user-scalable para não bloquear o zoom manual)
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#0A1430",
+};
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.nagamboaimoveis.com.br"),

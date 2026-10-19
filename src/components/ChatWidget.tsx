@@ -39,19 +39,30 @@ export default function ChatWidget() {
   }, [msgs, loading, open])
 
   useEffect(() => {
-    const abrir = () => setOpen(true)
+    const abrir = () => {
+      setTeaser(false)
+      setOpen(true)
+    }
     window.addEventListener('nagamboa:abrir-chat', abrir)
     return () => window.removeEventListener('nagamboa:abrir-chat', abrir)
   }, [])
 
   useEffect(() => {
-    const t = setTimeout(() => setTeaser(true), 3500)
+    // Mostra o convite uma vez por sessão: evita o balão aparecer sobre o conteúdo
+    // a cada página e engolir toques do usuário
+    let visto = false
+    try {
+      visto = sessionStorage.getItem('lia-convite') === '1'
+    } catch {}
+    if (visto) return
+    const t = setTimeout(() => {
+      setTeaser(true)
+      try {
+        sessionStorage.setItem('lia-convite', '1')
+      } catch {}
+    }, 3500)
     return () => clearTimeout(t)
   }, [])
-
-  useEffect(() => {
-    if (open) setTeaser(false)
-  }, [open])
 
   async function send() {
     const text = input.trim()
@@ -168,11 +179,11 @@ export default function ChatWidget() {
           <button
             onClick={() => setTeaser(false)}
             aria-label="Dispensar"
-            style={{ position: 'absolute', top: 6, right: 9, background: 'none', border: 'none', color: 'rgba(255,255,255,.55)', fontSize: 15, cursor: 'pointer', lineHeight: 1, padding: 2 }}
+            style={{ position: 'absolute', top: 0, right: 0, width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'none', border: 'none', color: 'rgba(255,255,255,.55)', fontSize: 16, cursor: 'pointer', lineHeight: 1, padding: 0 }}
           >
             ×
           </button>
-          <div onClick={() => setOpen(true)} style={{ cursor: 'pointer' }}>
+          <div onClick={() => { setTeaser(false); setOpen(true) }} style={{ cursor: 'pointer' }}>
             <div style={{ fontSize: 13.5, color: '#fff', lineHeight: 1.45, paddingRight: 10 }}>
               Oi! Eu sou a <strong style={{ color: '#E8B23A' }}>Lia</strong> 👋 Quer ajuda pra encontrar seu imóvel em Garopaba?
             </div>
@@ -183,7 +194,10 @@ export default function ChatWidget() {
 
       {/* Balão flutuante */}
       <button
-        onClick={() => setOpen((o) => !o)}
+        onClick={() => {
+          setTeaser(false)
+          setOpen((o) => !o)
+        }}
         aria-label={open ? 'Fechar chat' : 'Abrir chat'}
         className={open ? undefined : 'lia-btn'}
         style={{
@@ -204,7 +218,7 @@ export default function ChatWidget() {
         <div
           style={{
             position: 'fixed', right: 22, bottom: 110, zIndex: 300,
-            width: 'min(380px, calc(100vw - 32px))', height: 'min(540px, calc(100vh - 148px))',
+            width: 'min(380px, calc(100vw - 32px))', height: 'min(540px, calc(100dvh - 148px))',
             background: '#0B1738', border: '1px solid rgba(255,255,255,.12)', borderRadius: 18,
             display: 'flex', flexDirection: 'column', overflow: 'hidden',
             boxShadow: '0 16px 48px rgba(0,0,0,.55)', fontFamily: "'Jost',sans-serif", color: '#fff',

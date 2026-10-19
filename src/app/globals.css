@@ -16,6 +16,10 @@ button { font-family: inherit; }
   .reveal { animation:revealUp linear both; animation-timeline:view(); animation-range:entry 0% cover 32% }
 }
 
+/* Itens de grid não podem forçar a página a ficar mais larga que a viewport
+   (ex.: faixa de miniaturas da galeria com largura mínima de 620px) */
+.two-col > *, .bento > *, .three-col > * { min-width: 0 }
+
 .pcard { transition:transform .55s cubic-bezier(.2,.7,.2,1),box-shadow .55s ease,border-color .55s ease }
 .pcard:hover { transform:translateY(-8px);box-shadow:0 30px 64px rgba(0,0,0,.5);border-color:rgba(232,178,58,.45) !important }
 .pimg { transition:transform 1.2s cubic-bezier(.2,.7,.2,1) }
@@ -43,6 +47,9 @@ button { font-family: inherit; }
   .three-col { grid-template-columns:1fr !important }
   .bottomnav { display:flex !important }
   .m-burger { display:flex !important }
+  /* iOS Safari dá zoom automático ao focar campos com fonte menor que 16px
+     e nem sempre volta ao normal; 16px evita o zoom sem bloquear o do usuário */
+  input, select, textarea { font-size:16px !important }
 }
 
 .bottomnav { display:none }

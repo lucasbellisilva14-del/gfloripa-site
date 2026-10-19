@@ -78,7 +78,7 @@ export default async function EmpreendimentosPage() {
                         <div className="pimg" style={{ position: 'absolute', inset: 0, background: 'linear-gradient(150deg,#0E1D48,#1B4965 55%,#5FA8A0)' }} />
                       )}
                       <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(180deg,transparent 45%,rgba(10,20,48,.85))' }} />
-                      <span style={{ position: 'absolute', left: 16, top: 16, background: 'rgba(232,178,58,.95)', color: '#0A1430', fontSize: 10.5, letterSpacing: '.08em', textTransform: 'uppercase', padding: '6px 12px', borderRadius: 30, fontWeight: 600 }}>
+                      <span style={{ position: 'absolute', left: 16, top: 16, background: 'rgba(232,178,58,.95)', color: '#0A1430', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', padding: '6px 12px', borderRadius: 30, fontWeight: 600 }}>
                         {statusLabel(c)}
                       </span>
                       {entrega && (
