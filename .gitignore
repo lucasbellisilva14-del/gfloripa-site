@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# QA mobile (screenshots gerados pelo scripts/qa-mobile.mjs)
+/qa-screenshots/

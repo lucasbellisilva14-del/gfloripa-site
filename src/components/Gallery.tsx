@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import Image from 'next/image'
 import { type PropertyImage } from '@/lib/jetimob'
 
 export default function Gallery({ images, contratoLabel }: { images: PropertyImage[]; contratoLabel: string }) {
   const [idx, setIdx] = useState(0)
+  const touchStart = useRef<{ x: number; y: number } | null>(null)
 
   const total = images.length
   const current = images[idx]
@@ -13,9 +14,28 @@ export default function Gallery({ images, contratoLabel }: { images: PropertyIma
   function prev() { setIdx((i) => (i - 1 + total) % total) }
   function next() { setIdx((i) => (i + 1) % total) }
 
+  // Swipe horizontal troca a foto; movimento vertical segue sendo scroll da página
+  function onTouchStart(e: React.TouchEvent) {
+    touchStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY }
+  }
+  function onTouchEnd(e: React.TouchEvent) {
+    if (!touchStart.current || total < 2) return
+    const dx = e.changedTouches[0].clientX - touchStart.current.x
+    const dy = e.changedTouches[0].clientY - touchStart.current.y
+    touchStart.current = null
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+      if (dx < 0) next()
+      else prev()
+    }
+  }
+
   return (
     <div>
-      <div style={{ height: 440, borderRadius: 16, position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg,#0E1D48,#1B4965)' }}>
+      <div
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+        style={{ height: 440, borderRadius: 16, position: 'relative', overflow: 'hidden', background: 'linear-gradient(150deg,#0E1D48,#1B4965)', touchAction: 'pan-y' }}
+      >
         {current && (
           <Image
             src={current.link}
@@ -26,7 +46,7 @@ export default function Gallery({ images, contratoLabel }: { images: PropertyIma
             priority
           />
         )}
-        <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 80% 16%, rgba(232,178,58,.32), transparent 42%)' }} />
+        <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none', background: 'radial-gradient(circle at 80% 16%, rgba(232,178,58,.32), transparent 42%)' }} />
         <span style={{ position: 'absolute', left: 18, top: 18, background: 'rgba(232,178,58,.95)', color: '#0A1430', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', padding: '7px 14px', borderRadius: 30, fontWeight: 600 }}>
           {contratoLabel}
         </span>
@@ -37,8 +57,8 @@ export default function Gallery({ images, contratoLabel }: { images: PropertyIma
         )}
         {total > 1 && (
           <>
-            <button onClick={prev} style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', background: 'rgba(10,20,48,.6)', border: '1px solid rgba(255,255,255,.25)', color: '#fff', fontSize: 18, cursor: 'pointer' }}>‹</button>
-            <button onClick={next} style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', width: 42, height: 42, borderRadius: '50%', background: 'rgba(10,20,48,.6)', border: '1px solid rgba(255,255,255,.25)', color: '#fff', fontSize: 18, cursor: 'pointer' }}>›</button>
+            <button onClick={prev} aria-label="Foto anterior" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(10,20,48,.6)', border: '1px solid rgba(255,255,255,.25)', color: '#fff', fontSize: 18, cursor: 'pointer' }}>‹</button>
+            <button onClick={next} aria-label="Próxima foto" style={{ position: 'absolute', right: 16, top: '50%', transform: 'translateY(-50%)', width: 44, height: 44, borderRadius: '50%', background: 'rgba(10,20,48,.6)', border: '1px solid rgba(255,255,255,.25)', color: '#fff', fontSize: 18, cursor: 'pointer' }}>›</button>
           </>
         )}
       </div>
