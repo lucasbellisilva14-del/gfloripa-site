@@ -82,7 +82,31 @@ export default async function ImoveisPage({
     error = true
   }
 
+  // Opções dinâmicas dos filtros: todas as cidades e bairros reais do portfólio
+  const cidades = [...new Set(all.map((p) => p.endereco_cidade).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+  const cidadeParam = params.cidade
+  const bairros = [
+    ...new Set(
+      all
+        .filter((p) => !cidadeParam || p.endereco_cidade?.toLowerCase() === cidadeParam.toLowerCase())
+        .map((p) => p.endereco_bairro)
+        .filter(Boolean)
+    ),
+  ].sort((a, b) => a.localeCompare(b, 'pt-BR'))
+
   if (!error) {
+    const buscaParam = params.busca?.trim().toLowerCase()
+    if (buscaParam) {
+      all = all.filter((p) =>
+        [p.codigo, p.titulo_anuncio, p.endereco_bairro, p.endereco_cidade, p.observacoes]
+          .some((campo) => campo?.toLowerCase().includes(buscaParam))
+      )
+    }
+
+    if (cidadeParam) {
+      all = all.filter((p) => p.endereco_cidade?.toLowerCase() === cidadeParam.toLowerCase())
+    }
+
     const contratoParam = params.contrato
     if (contratoParam) {
       const map: Record<string, string[]> = {
@@ -114,8 +138,11 @@ export default async function ImoveisPage({
         'centro': { bairro: 'centro', cidade: 'garopaba' },
         'siriú': { bairro: 'siriú' },
       }
+      const exato = all.some((p) => p.endereco_bairro?.toLowerCase() === bairroParam.toLowerCase())
       const alias = aliases[bairroParam.toLowerCase()]
-      if (alias) {
+      if (exato) {
+        all = all.filter((p) => p.endereco_bairro?.toLowerCase() === bairroParam.toLowerCase())
+      } else if (alias) {
         all = all.filter(
           (p) =>
             p.endereco_bairro?.toLowerCase().includes(alias.bairro) &&
@@ -134,6 +161,20 @@ export default async function ImoveisPage({
     if (quartosParam > 0) {
       all = all.filter((p) => p.dormitorios >= quartosParam)
     }
+
+    const ordem = params.ordem
+    if (ordem === 'preco_asc' || ordem === 'preco_desc') {
+      const preco = (p: Property) =>
+        (p.valor_venda_visivel && p.valor_venda) || p.valor_locacao || p.valor_temporada || null
+      all = [...all].sort((a, b) => {
+        const pa = preco(a)
+        const pb = preco(b)
+        if (pa === null && pb === null) return 0
+        if (pa === null) return 1 // sem preço ("Consulte") sempre no fim
+        if (pb === null) return -1
+        return ordem === 'preco_asc' ? pa - pb : pb - pa
+      })
+    }
   }
 
   const total = all.length
@@ -151,7 +192,7 @@ export default async function ImoveisPage({
         <div style={{ maxWidth: 1300, margin: '0 auto' }}>
           <div style={{ fontSize: 11, letterSpacing: '.2em', textTransform: 'uppercase', color: '#E8B23A', marginBottom: 6 }}>Garopaba e região</div>
           <h1 style={{ fontFamily: "'Marcellus',serif", fontSize: 30, marginBottom: 18 }}>Imóveis disponíveis</h1>
-          <FilterBar searchParams={params} />
+          <FilterBar searchParams={params} cidades={cidades} bairros={bairros} />
           <div style={{ marginTop: 18, fontSize: 13, color: 'rgba(255,255,255,.65)' }}>{countText}</div>
         </div>
       </div>

@@ -28,16 +28,10 @@ const contratoOptions = [
 
 const tipoOptions = ['Todos', 'Apartamento', 'Casa', 'Terreno', 'Cobertura', 'Casa de Condomínio', 'Sobrado', 'Loft']
 
-const bairroOptions = [
-  'Todos',
-  'Praia da Gamboa',
-  'Siriú',
-  'Centro Garopaba',
-  'Paulo Lopes',
-  'Areias',
-  'Forquilhas',
-  'Pedra Branca',
-  'Ingleses',
+const ordemOptions = [
+  { label: 'Ordenar', value: '' },
+  { label: 'Menor preço', value: 'preco_asc' },
+  { label: 'Maior preço', value: 'preco_desc' },
 ]
 
 const quartosOptions = [
@@ -48,7 +42,7 @@ const quartosOptions = [
   { label: '4+', value: '4' },
 ]
 
-export default function FilterBar({ searchParams }: { searchParams: Record<string, string> }) {
+export default function FilterBar({ searchParams, cidades, bairros }: { searchParams: Record<string, string>; cidades: string[]; bairros: string[] }) {
   const router = useRouter()
 
   function update(key: string, value: string) {
@@ -58,6 +52,7 @@ export default function FilterBar({ searchParams }: { searchParams: Record<strin
     } else {
       q.delete(key)
     }
+    if (key === 'cidade') q.delete('bairro')
     q.delete('page')
     router.push(`/imoveis?${q.toString()}`)
   }
@@ -101,14 +96,29 @@ export default function FilterBar({ searchParams }: { searchParams: Record<strin
         <span style={chevron}>▾</span>
       </div>
 
+      <div style={{ ...wrapStyle, minWidth: 160 }}>
+        <select
+          value={searchParams.cidade ?? ''}
+          onChange={(e) => update('cidade', e.target.value)}
+          style={{ ...selectStyle, minWidth: 160 }}
+        >
+          <option value="" style={{ background: '#0A1430' }}>Cidade: todas</option>
+          {cidades.map((c) => (
+            <option key={c} value={c} style={{ background: '#0A1430' }}>{c}</option>
+          ))}
+        </select>
+        <span style={chevron}>▾</span>
+      </div>
+
       <div style={{ ...wrapStyle, minWidth: 170 }}>
         <select
           value={searchParams.bairro ?? ''}
-          onChange={(e) => update('bairro', e.target.value === 'Todos' ? '' : e.target.value)}
+          onChange={(e) => update('bairro', e.target.value)}
           style={{ ...selectStyle, minWidth: 170 }}
         >
-          {bairroOptions.map((o) => (
-            <option key={o} value={o === 'Todos' ? '' : o} style={{ background: '#0A1430' }}>{o}</option>
+          <option value="" style={{ background: '#0A1430' }}>Bairro: todos</option>
+          {bairros.map((b) => (
+            <option key={b} value={b} style={{ background: '#0A1430' }}>{b}</option>
           ))}
         </select>
         <span style={chevron}>▾</span>
@@ -126,6 +136,28 @@ export default function FilterBar({ searchParams }: { searchParams: Record<strin
         </select>
         <span style={chevron}>▾</span>
       </div>
+
+      <div style={{ ...wrapStyle, minWidth: 140 }}>
+        <select
+          value={searchParams.ordem ?? ''}
+          onChange={(e) => update('ordem', e.target.value)}
+          style={{ ...selectStyle, minWidth: 140 }}
+        >
+          {ordemOptions.map((o) => (
+            <option key={o.value} value={o.value} style={{ background: '#0A1430' }}>{o.label}</option>
+          ))}
+        </select>
+        <span style={chevron}>▾</span>
+      </div>
+
+      <input
+        type="search"
+        defaultValue={searchParams.busca ?? ''}
+        placeholder="Buscar por código, título ou região"
+        onKeyDown={(e) => { if (e.key === 'Enter') update('busca', (e.target as HTMLInputElement).value.trim()) }}
+        onBlur={(e) => { if (e.target.value.trim() !== (searchParams.busca ?? '')) update('busca', e.target.value.trim()) }}
+        style={{ ...selectStyle, minWidth: 230, cursor: 'text' }}
+      />
 
       <Link href="/imoveis" style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', cursor: 'pointer', textDecoration: 'underline' }}>Limpar</Link>
     </div>

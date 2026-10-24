@@ -4,7 +4,8 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Gallery from '@/components/Gallery'
 import InterestForm from '@/components/InterestForm'
-import { getProperty, formatPrice, type Property } from '@/lib/jetimob'
+import { getProperty, getCorretorById, getAllProperties, formatPrice, type Property } from '@/lib/jetimob'
+import PropertyCard from '@/components/PropertyCard'
 
 const SITE_URL = 'https://www.nagamboaimoveis.com.br'
 
@@ -157,6 +158,35 @@ export default async function ImovelPage({
 }) {
   const { codigo } = await params
   const property = await getProperty(codigo).catch(() => null)
+  const corretor = property ? await getCorretorById(property.id_corretor).catch(() => null) : null
+
+  // Imóveis relacionados: mesma cidade, priorizando mesmo bairro e tipo,
+  // com preço na faixa de até ~60% de diferença quando houver preço
+  let relacionados: Property[] = []
+  if (property) {
+    try {
+      const todas = await getAllProperties()
+      const preco = (x: Property) => (x.valor_venda_visivel && x.valor_venda) || x.valor_locacao || null
+      const precoBase = preco(property)
+      relacionados = todas
+        .filter((x) => x.codigo !== property.codigo && x.endereco_cidade === property.endereco_cidade)
+        .map((x) => {
+          let pontos = 0
+          if (x.endereco_bairro === property.endereco_bairro) pontos += 2
+          if (x.tipo === property.tipo) pontos += 1
+          if (x.subtipo === property.subtipo) pontos += 1
+          const px = preco(x)
+          if (precoBase && px && Math.abs(px - precoBase) / precoBase <= 0.6) pontos += 2
+          return { x, pontos }
+        })
+        .filter((r) => r.pontos >= 2)
+        .sort((a, b) => b.pontos - a.pontos)
+        .slice(0, 3)
+        .map((r) => r.x)
+    } catch {
+      relacionados = []
+    }
+  }
 
   if (!property) {
     return (
@@ -241,10 +271,17 @@ export default async function ImovelPage({
               <InterestForm codigo={property.codigo} titulo={property.titulo_anuncio} />
 
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 20, background: '#10204A', border: '1px solid rgba(255,255,255,.08)', borderRadius: 12, padding: '14px 16px' }}>
-                <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'radial-gradient(circle at 50% 125%, #E8B23A 0 52%, transparent 53%), #16265C', flexShrink: 0 }} />
+                {corretor?.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={corretor.avatar} alt={corretor.nome} style={{ width: 44, height: 44, borderRadius: '50%', objectFit: 'cover', border: '1.5px solid rgba(232,178,58,.6)', flexShrink: 0 }} />
+                ) : (
+                  <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'radial-gradient(circle at 50% 125%, #E8B23A 0 52%, transparent 53%), #16265C', flexShrink: 0 }} />
+                )}
                 <div>
-                  <div style={{ fontSize: 14 }}>Nagamboa Imóveis</div>
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)' }}>CRECI-SC · Especialistas em Garopaba</div>
+                  <div style={{ fontSize: 14 }}>{corretor ? corretor.nome : 'Nagamboa Imóveis'}</div>
+                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)' }}>
+                    {corretor ? `${corretor.cargo || 'Corretor responsável'} · CRECI ${corretor.creci}` : 'CRECI-SC 10145-J · Especialistas em Garopaba'}
+                  </div>
                 </div>
               </div>
             </div>
@@ -276,6 +313,17 @@ export default async function ImovelPage({
               )}
             </div>
           </div>
+
+          {relacionados.length > 0 && (
+            <div style={{ marginTop: 56 }}>
+              <h2 style={{ fontFamily: "'Marcellus',serif", fontSize: 26, marginBottom: 20 }}>Você também pode gostar</h2>
+              <div className="bento" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
+                {relacionados.map((r) => (
+                  <PropertyCard key={r.codigo} property={r} />
+                ))}
+              </div>
+            </div>
+          )}
 
           <div style={{ marginTop: 40 }}>
             <Link href="/imoveis" style={{ fontSize: 13, color: '#E8B23A', cursor: 'pointer' }}>← Voltar para a busca</Link>
