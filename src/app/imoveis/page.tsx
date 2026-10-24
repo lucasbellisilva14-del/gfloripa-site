@@ -164,8 +164,9 @@ export default async function ImoveisPage({
 
     const ordem = params.ordem
     if (ordem === 'preco_asc' || ordem === 'preco_desc') {
-      const preco = (p: Property) =>
-        (p.valor_venda_visivel && p.valor_venda) || p.valor_locacao || p.valor_temporada || null
+      // ordenação considera só o valor de venda; aluguel/temporada e
+      // "Consulte" ficam no fim da lista
+      const preco = (p: Property) => (p.valor_venda_visivel && p.valor_venda) || null
       all = [...all].sort((a, b) => {
         const pa = preco(a)
         const pb = preco(b)
