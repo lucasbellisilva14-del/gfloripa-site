@@ -21,11 +21,12 @@ const selectStyle: React.CSSProperties = {
   appearance: 'none',
 }
 
-export default function HeroCarousel() {
+export default function HeroCarousel({ locais = {} }: { locais?: Record<string, string[]> }) {
   const [current, setCurrent] = useState(0)
   const [contrato, setContrato] = useState('Comprar')
   const [tipo, setTipo] = useState('Qualquer')
-  const [bairro, setBairro] = useState('Qualquer')
+  const [cidade, setCidade] = useState('')
+  const [bairro, setBairro] = useState('')
   const router = useRouter()
 
   useEffect(() => {
@@ -43,7 +44,8 @@ export default function HeroCarousel() {
     const q = new URLSearchParams()
     q.set('contrato', contratoMap[contrato] ?? 'compra')
     if (tipo !== 'Qualquer') q.set('tipo', tipo)
-    if (bairro !== 'Qualquer') q.set('bairro', bairro)
+    if (cidade) q.set('cidade', cidade)
+    if (bairro) q.set('bairro', bairro)
     router.push(`/imoveis?${q.toString()}`)
   }
 
@@ -160,11 +162,30 @@ export default function HeroCarousel() {
                 ))}
               </select>
             </div>
-            <div style={{ flex: '1.3 1 160px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
+            <div style={{ flex: '1.2 1 150px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
+              <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Cidade</div>
+              <select
+                value={cidade}
+                onChange={(e) => { setCidade(e.target.value); setBairro('') }}
+                style={selectStyle}
+              >
+                <option value="" style={{ background: '#0A1430' }}>Qualquer</option>
+                {Object.keys(locais).map((c) => (
+                  <option key={c} value={c} style={{ background: '#0A1430' }}>{c}</option>
+                ))}
+              </select>
+            </div>
+            <div style={{ flex: '1.2 1 150px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left', opacity: cidade ? 1 : 0.55 }}>
               <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Bairro</div>
-              <select value={bairro} onChange={(e) => setBairro(e.target.value)} style={selectStyle}>
-                {['Qualquer', 'Praia da Gamboa', 'Siriú', 'Centro', 'Paulo Lopes'].map((o) => (
-                  <option key={o} value={o} style={{ background: '#0A1430' }}>{o}</option>
+              <select
+                value={bairro}
+                onChange={(e) => setBairro(e.target.value)}
+                disabled={!cidade}
+                style={{ ...selectStyle, cursor: cidade ? 'pointer' : 'default' }}
+              >
+                <option value="" style={{ background: '#0A1430' }}>{cidade ? 'Todos' : 'Escolha a cidade'}</option>
+                {(locais[cidade] ?? []).map((b) => (
+                  <option key={b} value={b} style={{ background: '#0A1430' }}>{b}</option>
                 ))}
               </select>
             </div>

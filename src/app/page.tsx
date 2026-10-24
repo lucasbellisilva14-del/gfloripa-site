@@ -30,11 +30,31 @@ export default async function Home() {
     featured = []
   }
 
+  // Cidades e bairros reais para a busca do hero (cascata Cidade -> Bairro)
+  let locais: Record<string, string[]> = {}
+  try {
+    const todas = await getAllProperties()
+    for (const p of todas) {
+      if (!p.endereco_cidade) continue
+      locais[p.endereco_cidade] ??= []
+      if (p.endereco_bairro && !locais[p.endereco_cidade].includes(p.endereco_bairro)) {
+        locais[p.endereco_cidade].push(p.endereco_bairro)
+      }
+    }
+    locais = Object.fromEntries(
+      Object.entries(locais)
+        .sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
+        .map(([c, bs]) => [c, bs.sort((a, b) => a.localeCompare(b, 'pt-BR'))])
+    )
+  } catch {
+    locais = {}
+  }
+
   return (
     <div style={{ fontFamily: "'Jost',sans-serif", background: '#0A1430', color: '#fff' }}>
       <Header />
 
-      <HeroCarousel />
+      <HeroCarousel locais={locais} />
 
       <section className="sect reveal" style={{ padding: '70px 48px 16px', background: '#0A1430' }}>
         <div style={{ maxWidth: 1300, margin: '0 auto' }}>
