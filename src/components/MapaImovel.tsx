@@ -66,7 +66,7 @@ export default function MapaImovel({ latitude, longitude, bairro }: Props) {
         .mapa-ponto { width:18px;height:18px;border-radius:50%;background:#E8B23A;border:2.5px solid #0A1430;box-shadow:0 0 0 7px rgba(232,178,58,.3);animation:liaPulse 2.6s ease-out infinite }
         .mapa-imovel .leaflet-tile { filter: invert(1) hue-rotate(195deg) brightness(.82) contrast(1.05) saturate(.55) }
         .mapa-imovel .leaflet-control-zoom a { background:#10204A !important;color:#E8B23A !important;border-color:rgba(255,255,255,.15) !important }
-        .mapa-imovel .leaflet-control-attribution { background:rgba(10,20,48,.75) !important;color:rgba(255,255,255,.45) !important;font-size:9px }
+        .mapa-imovel .leaflet-control-attribution { background:rgba(10,20,48,.75) !important;color:rgba(255,255,255,.45) !important;font-size:10.5px }
         .mapa-imovel .leaflet-control-attribution a { color:rgba(255,255,255,.55) !important }
       `}</style>
       <div
