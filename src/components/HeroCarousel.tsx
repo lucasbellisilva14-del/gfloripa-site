@@ -25,14 +25,24 @@ export default function HeroCarousel({ locais = {} }: { locais?: Record<string, 
   const [current, setCurrent] = useState(0)
   const [contrato, setContrato] = useState('Comprar')
   const [tipo, setTipo] = useState('Qualquer')
-  const [cidade, setCidade] = useState('')
-  const [bairro, setBairro] = useState('')
+  const [busca, setBusca] = useState('')
+  const [aberto, setAberto] = useState(false)
+  const [selecionados, setSelecionados] = useState<string[]>([]) // formato "Bairro|Cidade"
   const router = useRouter()
 
   useEffect(() => {
     const t = setInterval(() => setCurrent((c) => (c + 1) % slides.length), 5000)
     return () => clearInterval(t)
   }, [])
+
+  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  const todosLocais = Object.entries(locais).flatMap(([cid, bs]) => bs.map((b) => ({ bairro: b, cidade: cid })))
+  const filtrados = todosLocais.filter((l) => !busca.trim() || norm(`${l.bairro} ${l.cidade}`).includes(norm(busca)))
+  const pareceCodigo = /^[a-z]{1,3}\d{2,}/i.test(busca.trim())
+
+  function toggleLocal(chave: string) {
+    setSelecionados((s) => (s.includes(chave) ? s.filter((x) => x !== chave) : [...s, chave]))
+  }
 
   function handleBuscar() {
     const contratoMap: Record<string, string> = {
@@ -44,8 +54,11 @@ export default function HeroCarousel({ locais = {} }: { locais?: Record<string, 
     const q = new URLSearchParams()
     q.set('contrato', contratoMap[contrato] ?? 'compra')
     if (tipo !== 'Qualquer') q.set('tipo', tipo)
-    if (cidade) q.set('cidade', cidade)
-    if (bairro) q.set('bairro', bairro)
+    if (pareceCodigo && selecionados.length === 0) {
+      router.push(`/imovel/${busca.trim().toUpperCase()}`)
+      return
+    }
+    if (selecionados.length > 0) q.set('locais', selecionados.join(','))
     router.push(`/imoveis?${q.toString()}`)
   }
 
@@ -162,32 +175,63 @@ export default function HeroCarousel({ locais = {} }: { locais?: Record<string, 
                 ))}
               </select>
             </div>
-            <div style={{ flex: '1.2 1 150px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Cidade</div>
-              <select
-                value={cidade}
-                onChange={(e) => { setCidade(e.target.value); setBairro('') }}
-                style={selectStyle}
-              >
-                <option value="" style={{ background: '#0A1430' }}>Qualquer</option>
-                {Object.keys(locais).map((c) => (
-                  <option key={c} value={c} style={{ background: '#0A1430' }}>{c}</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ flex: '1.2 1 150px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left', opacity: cidade ? 1 : 0.55 }}>
-              <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Bairro</div>
-              <select
-                value={bairro}
-                onChange={(e) => setBairro(e.target.value)}
-                disabled={!cidade}
-                style={{ ...selectStyle, cursor: cidade ? 'pointer' : 'default' }}
-              >
-                <option value="" style={{ background: '#0A1430' }}>{cidade ? 'Todos' : 'Escolha a cidade'}</option>
-                {(locais[cidade] ?? []).map((b) => (
-                  <option key={b} value={b} style={{ background: '#0A1430' }}>{b}</option>
-                ))}
-              </select>
+            <div style={{ flex: '2 1 240px', position: 'relative', textAlign: 'left' }}>
+              <div style={{ background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px' }}>
+                <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Localização</div>
+                <input
+                  value={busca}
+                  onChange={(e) => { setBusca(e.target.value); setAberto(true) }}
+                  onFocus={() => setAberto(true)}
+                  onBlur={() => setTimeout(() => setAberto(false), 180)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleBuscar() }}
+                  placeholder={selecionados.length > 0 ? `${selecionados.length} selecionado${selecionados.length > 1 ? 's' : ''}` : 'Bairro, cidade ou código'}
+                  style={{ ...selectStyle, cursor: 'text', padding: 0, border: 'none', background: 'transparent', minWidth: 0 }}
+                />
+              </div>
+
+              {aberto && (
+                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, background: '#0B1738', border: '1px solid rgba(232,178,58,.4)', borderRadius: 13, boxShadow: '0 16px 44px rgba(0,0,0,.55)', maxHeight: 280, overflowY: 'auto', textAlign: 'left' }}>
+                  {pareceCodigo && (
+                    <div
+                      onMouseDown={() => { router.push(`/imovel/${busca.trim().toUpperCase()}`) }}
+                      style={{ padding: '12px 16px', fontSize: 13.5, color: '#E8B23A', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,.08)' }}
+                    >
+                      Buscar pelo código {busca.trim().toUpperCase()} →
+                    </div>
+                  )}
+                  <div style={{ padding: '10px 16px 6px', fontSize: 10.5, letterSpacing: '.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)' }}>Bairros</div>
+                  {filtrados.length === 0 && (
+                    <div style={{ padding: '10px 16px 14px', fontSize: 13, color: 'rgba(255,255,255,.55)' }}>Nenhum bairro encontrado</div>
+                  )}
+                  {filtrados.slice(0, 40).map((l) => {
+                    const chave = `${l.bairro}|${l.cidade}`
+                    const marcado = selecionados.includes(chave)
+                    return (
+                      <div
+                        key={chave}
+                        onMouseDown={(e) => { e.preventDefault(); toggleLocal(chave) }}
+                        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 16px', fontSize: 13.5, color: '#fff', cursor: 'pointer', background: marcado ? 'rgba(232,178,58,.12)' : 'transparent' }}
+                      >
+                        <span style={{ width: 17, height: 17, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${marcado ? '#E8B23A' : 'rgba(255,255,255,.35)'}`, background: marcado ? '#E8B23A' : 'transparent', color: '#0A1430', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {marcado ? '✓' : ''}
+                        </span>
+                        {l.bairro}, {l.cidade} - SC
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {selecionados.length > 0 && (
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                  {selecionados.map((chave) => (
+                    <span key={chave} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(232,178,58,.92)', color: '#0A1430', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 30 }}>
+                      {chave.split('|')[0]}
+                      <span onClick={() => toggleLocal(chave)} style={{ cursor: 'pointer', fontWeight: 700 }}>×</span>
+                    </span>
+                  ))}
+                </div>
+              )}
             </div>
             <button
               onClick={handleBuscar}

@@ -107,6 +107,23 @@ export default async function ImoveisPage({
       all = all.filter((p) => p.endereco_cidade?.toLowerCase() === cidadeParam.toLowerCase())
     }
 
+    // Localizações múltiplas vindas da busca da home: "Bairro|Cidade,Bairro|Cidade"
+    const locaisParam = params.locais
+    if (locaisParam) {
+      const pares = locaisParam
+        .split(',')
+        .map((item) => item.split('|').map((s) => s.trim().toLowerCase()))
+        .filter((par) => par[0])
+      if (pares.length > 0) {
+        all = all.filter((p) =>
+          pares.some(
+            ([b, c]) =>
+              p.endereco_bairro?.toLowerCase() === b && (!c || p.endereco_cidade?.toLowerCase() === c)
+          )
+        )
+      }
+    }
+
     const contratoParam = params.contrato
     if (contratoParam) {
       const map: Record<string, string[]> = {
