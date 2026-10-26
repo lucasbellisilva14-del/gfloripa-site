@@ -53,8 +53,8 @@ export default function PropertyCard({ property }: { property: Property }) {
         <div style={{ position: 'absolute', inset: 0, background: 'radial-gradient(circle at 82% 16%, rgba(232,178,58,.32), transparent 40%)' }} />
         <span style={{ position: 'absolute', left: 16, top: 16, display: 'flex', gap: 7, alignItems: 'center' }}>
           {property.exclusividade && (
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: '#F7EFDB', color: '#8A6400', fontSize: 13, padding: '6px 13px', borderRadius: 9, fontWeight: 700 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#C9941A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(232,178,58,.95)', color: '#0A1430', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', padding: '6px 12px', borderRadius: 30, fontWeight: 600 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0A1430" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.2 9.4l6.1-.8z" />
               </svg>
               Exclusivo

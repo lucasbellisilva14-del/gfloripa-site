@@ -254,8 +254,8 @@ export default async function ImovelPage({
               <div style={{ fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: '#E8B23A', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                 <span>{property.tipo} · {property.codigo}</span>
                 {property.exclusividade && (
-                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#F7EFDB', color: '#8A6400', borderRadius: 8, padding: '5px 11px', fontSize: 11.5, fontWeight: 700, textTransform: 'none', letterSpacing: 0 }}>
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C9941A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(232,178,58,.95)', color: '#0A1430', borderRadius: 30, padding: '5px 11px', fontSize: 10.5, fontWeight: 600, letterSpacing: '.08em' }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0A1430" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                       <path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.2 9.4l6.1-.8z" />
                     </svg>
                     Exclusivo Nagamboa
