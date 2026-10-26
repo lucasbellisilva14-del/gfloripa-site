@@ -80,6 +80,8 @@ async function auditPage(pw, path, name) {
       if (!hasText) continue
       const cs = getComputedStyle(el)
       if (cs.visibility === 'hidden' || cs.display === 'none') continue
+      // atribuição de mapa é crédito legal, pequena por padrão em toda a web
+      if (el.closest('.leaflet-control-attribution')) continue
       const fs = parseFloat(cs.fontSize)
       if (fs < 11) out.add(`${el.tagName.toLowerCase()} ${fs}px "${el.textContent.trim().slice(0, 24)}"`)
       if (out.size >= 6) break
