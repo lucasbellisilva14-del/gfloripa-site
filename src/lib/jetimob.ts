@@ -40,6 +40,7 @@ export type Property = {
   imagens: PropertyImage[]
   status: string
   id_corretor: number | null
+  exclusividade?: boolean | null
   id_condominio?: number | null
   condominio_nome?: string | null
   data_atualizacao?: string | null

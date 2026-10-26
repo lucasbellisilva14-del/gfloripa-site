@@ -22,10 +22,18 @@ export default async function Home() {
   let featured: Property[] = []
   try {
     const all = await getAllProperties()
-    featured = all
-      .filter((p) => p.endereco_bairro?.toLowerCase().includes('gamboa'))
-      .slice(0, 6)
-    if (featured.length === 0) featured = all.slice(0, 6)
+    // Destaques por prioridade comercial: exclusivos primeiro, depois
+    // terrenos, peso extra para o Loteamento Mares de Garopaba e para a Gamboa
+    const ehTerreno = (p: Property) =>
+      `${p.subtipo ?? ''} ${p.tipo ?? ''}`.toLowerCase().includes('terreno') || /^[LT]/i.test(p.codigo)
+    const noLoteamento = (p: Property) =>
+      p.id_condominio === 386780 || (p.titulo_anuncio ?? '').toLowerCase().includes('mares de garopaba')
+    const pontos = (p: Property) =>
+      (p.exclusividade ? 4 : 0) +
+      (ehTerreno(p) ? 2 : 0) +
+      (noLoteamento(p) ? 2 : 0) +
+      (p.endereco_bairro?.toLowerCase().includes('gamboa') ? 1 : 0)
+    featured = [...all].sort((a, b) => pontos(b) - pontos(a)).slice(0, 6)
   } catch {
     featured = []
   }
