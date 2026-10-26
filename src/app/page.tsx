@@ -30,24 +30,22 @@ export default async function Home() {
     featured = []
   }
 
-  // Cidades e bairros reais para a busca do hero (cascata Cidade -> Bairro)
-  let locais: Record<string, string[]> = {}
+  // Locais para a busca do hero, ranqueados por potencial: bairros com mais
+  // imóveis aparecem primeiro, como no site da GFloripa
+  let locais: { bairro: string; cidade: string; total: number }[] = []
   try {
     const todas = await getAllProperties()
+    const contagem = new Map<string, { bairro: string; cidade: string; total: number }>()
     for (const p of todas) {
-      if (!p.endereco_cidade) continue
-      locais[p.endereco_cidade] ??= []
-      if (p.endereco_bairro && !locais[p.endereco_cidade].includes(p.endereco_bairro)) {
-        locais[p.endereco_cidade].push(p.endereco_bairro)
-      }
+      if (!p.endereco_bairro || !p.endereco_cidade) continue
+      const chave = `${p.endereco_bairro}|${p.endereco_cidade}`
+      const atual = contagem.get(chave) ?? { bairro: p.endereco_bairro, cidade: p.endereco_cidade, total: 0 }
+      atual.total += 1
+      contagem.set(chave, atual)
     }
-    locais = Object.fromEntries(
-      Object.entries(locais)
-        .sort(([a], [b]) => a.localeCompare(b, 'pt-BR'))
-        .map(([c, bs]) => [c, bs.sort((a, b) => a.localeCompare(b, 'pt-BR'))])
-    )
+    locais = [...contagem.values()].sort((a, b) => b.total - a.total)
   } catch {
-    locais = {}
+    locais = []
   }
 
   return (

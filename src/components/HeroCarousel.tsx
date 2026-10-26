@@ -21,7 +21,7 @@ const selectStyle: React.CSSProperties = {
   appearance: 'none',
 }
 
-export default function HeroCarousel({ locais = {} }: { locais?: Record<string, string[]> }) {
+export default function HeroCarousel({ locais = [] }: { locais?: { bairro: string; cidade: string; total: number }[] }) {
   const [current, setCurrent] = useState(0)
   const [contrato, setContrato] = useState('Comprar')
   const [tipo, setTipo] = useState('Qualquer')
@@ -36,8 +36,8 @@ export default function HeroCarousel({ locais = {} }: { locais?: Record<string, 
   }, [])
 
   const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  const todosLocais = Object.entries(locais).flatMap(([cid, bs]) => bs.map((b) => ({ bairro: b, cidade: cid })))
-  const filtrados = todosLocais.filter((l) => !busca.trim() || norm(`${l.bairro} ${l.cidade}`).includes(norm(busca)))
+  // a lista já vem ranqueada por potencial; o filtro de digitação preserva a ordem
+  const filtrados = locais.filter((l) => !busca.trim() || norm(`${l.bairro} ${l.cidade}`).includes(norm(busca)))
   const pareceCodigo = /^[a-z]{1,3}\d{2,}/i.test(busca.trim())
 
   function toggleLocal(chave: string) {
@@ -73,7 +73,6 @@ export default function HeroCarousel({ locais = {} }: { locais?: Record<string, 
         justifyContent: 'center',
         textAlign: 'center',
         padding: '60px 48px 76px',
-        overflow: 'hidden',
       }}
     >
       {slides.map((s, i) => (
@@ -190,7 +189,7 @@ export default function HeroCarousel({ locais = {} }: { locais?: Record<string, 
               </div>
 
               {aberto && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, background: '#0B1738', border: '1px solid rgba(232,178,58,.4)', borderRadius: 13, boxShadow: '0 16px 44px rgba(0,0,0,.55)', maxHeight: 280, overflowY: 'auto', textAlign: 'left' }}>
+                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, background: '#0B1738', border: '1px solid rgba(232,178,58,.4)', borderRadius: 13, boxShadow: '0 16px 44px rgba(0,0,0,.55)', maxHeight: 340, overflowY: 'auto', textAlign: 'left' }}>
                   {pareceCodigo && (
                     <div
                       onMouseDown={() => { router.push(`/imovel/${busca.trim().toUpperCase()}`) }}
