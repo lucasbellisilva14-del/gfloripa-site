@@ -290,7 +290,9 @@ export default async function ImovelPage({
                 <div>
                   <div style={{ fontSize: 14 }}>{corretor ? corretor.nome : 'Nagamboa Imóveis'}</div>
                   <div style={{ fontSize: 12, color: 'rgba(255,255,255,.55)' }}>
-                    {corretor ? `${corretor.cargo || 'Corretor responsável'} · CRECI ${corretor.creci}` : 'CRECI-SC 10145-J · Especialistas em Garopaba'}
+                    {corretor
+                      ? [corretor.cargo || 'Corretor responsável', corretor.creci ? `CRECI ${corretor.creci}` : null].filter(Boolean).join(' · ')
+                      : 'CRECI-SC 10145-J · Especialistas em Garopaba'}
                   </div>
                 </div>
               </div>
