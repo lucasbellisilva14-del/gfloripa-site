@@ -1,7 +1,5 @@
 'use client'
 
-import Link from 'next/link'
-import { useRouter } from 'next/navigation'
 
 const selectStyle: React.CSSProperties = {
   background: '#13234F',
@@ -42,20 +40,9 @@ const quartosOptions = [
   { label: '4+', value: '4' },
 ]
 
-export default function FilterBar({ searchParams, cidades, bairros }: { searchParams: Record<string, string>; cidades: string[]; bairros: string[] }) {
-  const router = useRouter()
+export default function FilterBar({ values, onChange, onClear, cidades, bairros }: { values: Record<string, string>; onChange: (key: string, value: string) => void; onClear: () => void; cidades: string[]; bairros: string[] }) {
 
-  function update(key: string, value: string) {
-    const q = new URLSearchParams(searchParams)
-    if (value) {
-      q.set(key, value)
-    } else {
-      q.delete(key)
-    }
-    if (key === 'cidade') q.delete('bairro')
-    q.delete('page')
-    router.push(`/imoveis?${q.toString()}`)
-  }
+  const update = onChange
 
   const wrapStyle: React.CSSProperties = { position: 'relative', minWidth: 150 }
   const chevron: React.CSSProperties = {
@@ -72,7 +59,7 @@ export default function FilterBar({ searchParams, cidades, bairros }: { searchPa
     <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'center' }}>
       <div style={wrapStyle}>
         <select
-          value={searchParams.contrato ?? ''}
+          value={values.contrato ?? ''}
           onChange={(e) => update('contrato', e.target.value)}
           style={selectStyle}
         >
@@ -85,7 +72,7 @@ export default function FilterBar({ searchParams, cidades, bairros }: { searchPa
 
       <div style={wrapStyle}>
         <select
-          value={searchParams.tipo ?? ''}
+          value={values.tipo ?? ''}
           onChange={(e) => update('tipo', e.target.value === 'Todos' ? '' : e.target.value)}
           style={selectStyle}
         >
@@ -98,7 +85,7 @@ export default function FilterBar({ searchParams, cidades, bairros }: { searchPa
 
       <div style={{ ...wrapStyle, minWidth: 160 }}>
         <select
-          value={searchParams.cidade ?? ''}
+          value={values.cidade ?? ''}
           onChange={(e) => update('cidade', e.target.value)}
           style={{ ...selectStyle, minWidth: 160 }}
         >
@@ -112,7 +99,7 @@ export default function FilterBar({ searchParams, cidades, bairros }: { searchPa
 
       <div style={{ ...wrapStyle, minWidth: 170 }}>
         <select
-          value={searchParams.bairro ?? ''}
+          value={values.bairro ?? ''}
           onChange={(e) => update('bairro', e.target.value)}
           style={{ ...selectStyle, minWidth: 170 }}
         >
@@ -126,7 +113,7 @@ export default function FilterBar({ searchParams, cidades, bairros }: { searchPa
 
       <div style={{ ...wrapStyle, minWidth: 130 }}>
         <select
-          value={searchParams.quartos ?? ''}
+          value={values.quartos ?? ''}
           onChange={(e) => update('quartos', e.target.value)}
           style={{ ...selectStyle, minWidth: 130 }}
         >
@@ -139,7 +126,7 @@ export default function FilterBar({ searchParams, cidades, bairros }: { searchPa
 
       <div style={{ ...wrapStyle, minWidth: 140 }}>
         <select
-          value={searchParams.ordem ?? ''}
+          value={values.ordem ?? ''}
           onChange={(e) => update('ordem', e.target.value)}
           style={{ ...selectStyle, minWidth: 140 }}
         >
@@ -152,14 +139,13 @@ export default function FilterBar({ searchParams, cidades, bairros }: { searchPa
 
       <input
         type="search"
-        defaultValue={searchParams.busca ?? ''}
+        defaultValue={values.busca ?? ''}
         placeholder="Buscar por código, título ou região"
-        onKeyDown={(e) => { if (e.key === 'Enter') update('busca', (e.target as HTMLInputElement).value.trim()) }}
-        onBlur={(e) => { if (e.target.value.trim() !== (searchParams.busca ?? '')) update('busca', e.target.value.trim()) }}
+        onChange={(e) => update('busca', e.target.value.trim())}
         style={{ ...selectStyle, minWidth: 230, cursor: 'text' }}
       />
 
-      <Link href="/imoveis" style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', cursor: 'pointer', textDecoration: 'underline' }}>Limpar</Link>
+      <button onClick={onClear} style={{ fontSize: 12.5, color: 'rgba(255,255,255,.6)', cursor: 'pointer', textDecoration: 'underline', background: 'none', border: 'none', fontFamily: "'Jost',sans-serif" }}>Limpar</button>
     </div>
   )
 }

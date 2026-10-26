@@ -12,8 +12,7 @@ export default function Header() {
   const emImoveis = /^\/(imoveis|imovel|empreendimento)/.test(pathname ?? '')
   const ativo = pathname === '/' ? 'inicio' : emImoveis ? 'imoveis' : null
   const corItem = (chave: string) => (ativo === chave ? '#E8B23A' : 'rgba(255,255,255,.55)')
-  const Dot = ({ chave }: { chave: string }) =>
-    ativo === chave ? <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#E8B23A', margin: '3px auto 0' }} /> : null
+  const dot = <div style={{ width: 4, height: 4, borderRadius: '50%', background: '#E8B23A', margin: '3px auto 0' }} />
 
   const navLinks = [
     { label: 'Comprar', href: '/imoveis?contrato=compra' },
@@ -147,7 +146,7 @@ export default function Header() {
         <Link href="/" style={{ textAlign: 'center', cursor: 'pointer', color: corItem('inicio') }}>
           <div style={{ fontSize: 19 }}>⌂</div>
           <div style={{ fontSize: 11, marginTop: 2 }}>Início</div>
-          <Dot chave="inicio" />
+          {ativo === 'inicio' && dot}
         </Link>
         <Link href="/imoveis" style={{ textAlign: 'center', cursor: 'pointer', color: 'rgba(255,255,255,.55)' }}>
           <div style={{ fontSize: 19 }}>⌕</div>
@@ -160,7 +159,7 @@ export default function Header() {
             <path d="M10 19.5V14h4v5.5" />
           </svg>
           <div style={{ fontSize: 11, marginTop: 2 }}>Imóveis</div>
-          <Dot chave="imoveis" />
+          {ativo === 'imoveis' && dot}
         </Link>
         <button onClick={() => setMenuOpen(true)} style={{ textAlign: 'center', cursor: 'pointer', color: 'rgba(255,255,255,.55)', background: 'none', border: 'none' }}>
           <div style={{ fontSize: 19 }}>≡</div>
