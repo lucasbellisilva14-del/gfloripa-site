@@ -78,7 +78,7 @@ export default function HeroCarousel({ locais = [] }: { locais?: { bairro: strin
       {slides.map((s, i) => (
         <div key={i} style={{ position: 'absolute', inset: 0, overflow: 'hidden', pointerEvents: 'none' }}>
           <div
-            className="pimg"
+            className="pimg kb-slide"
             style={{
               position: 'absolute',
               inset: '-4%',
@@ -143,7 +143,7 @@ export default function HeroCarousel({ locais = [] }: { locais?: { bairro: strin
           Casas frente-mar, apartamentos com vista e terrenos à beira da Gamboa. Encontre o seu refúgio.
         </p>
 
-        <div style={{ margin: '38px auto 0', maxWidth: 680, background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.22)', backdropFilter: 'blur(12px)', borderRadius: 16, padding: 12 }}>
+        <div style={{ margin: '38px auto 0', maxWidth: 680, background: 'rgba(255,255,255,.10)', border: '1px solid rgba(255,255,255,.22)', backdropFilter: 'blur(12px)', borderRadius: 16, padding: 12 }} className="glass">
           <div style={{ display: 'flex', gap: 22, justifyContent: 'center', padding: '6px 0 12px', flexWrap: 'wrap' }}>
             {['Comprar', 'Alugar', 'Temporada', 'Lançamentos'].map((c) => (
               <button

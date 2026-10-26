@@ -46,6 +46,15 @@ button { font-family: inherit; }
   .bento > * { grid-column:auto !important;grid-row:auto !important;min-height:180px !important }
   .three-col { grid-template-columns:1fr !important }
   .bottomnav { display:flex !important }
+  /* Fluidez de scroll no mobile: backdrop-filter em elementos fixos repinta o
+     desfoque a cada frame, mix-blend-mode compõe a seção inteira e o Ken Burns
+     anima imagens de tela cheia sem parar. Nada disso compensa em telefone. */
+  .hdr, .bottomnav, .glass { backdrop-filter:none !important;-webkit-backdrop-filter:none !important }
+  .hdr { background:rgba(7,17,43,.97) !important }
+  .grain { display:none !important }
+  .kb-slide { animation:none !important;transform:scale(1.06) !important }
+  .pcard { transition:none }
+  .reveal { opacity:1;transform:none;transition:none }
   /* a bottomnav tem 64px; a Lia sobe para não tampar o botão Menu */
   .lia-fab { bottom:78px !important }
   .lia-teaser { bottom:150px !important }
@@ -58,3 +67,9 @@ button { font-family: inherit; }
 
 .bottomnav { display:none }
 .m-burger { display:none }
+
+
+@media (prefers-reduced-motion: reduce) {
+  .kb-slide, .lia-btn, .lia-convite { animation:none !important }
+  .reveal { opacity:1;transform:none;transition:none }
+}
