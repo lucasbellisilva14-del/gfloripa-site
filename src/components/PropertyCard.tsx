@@ -30,7 +30,6 @@ function getSpecs(p: Property): string {
 
 export default function PropertyCard({ property }: { property: Property }) {
   const img = property.imagens?.[0]?.link ?? ''
-  const contratoLabel = getContrato(property)
   const tipoBairro = [property.tipo, property.endereco_bairro].filter(Boolean).join(' · ').toUpperCase()
   const preco = getPreco(property)
   const specsText = getSpecs(property)
@@ -61,9 +60,6 @@ export default function PropertyCard({ property }: { property: Property }) {
               Exclusivo
             </span>
           )}
-          <span style={{ background: 'rgba(232,178,58,.95)', color: '#0A1430', fontSize: 11, letterSpacing: '.08em', textTransform: 'uppercase', padding: '6px 12px', borderRadius: 30, fontWeight: 600 }}>
-            {contratoLabel}
-          </span>
         </span>
         <span style={{ position: 'absolute', right: 16, top: 16, color: 'rgba(255,255,255,.8)', fontSize: 11 }}>{property.codigo}</span>
         <div style={{ position: 'absolute', left: 18, bottom: 14, fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.85)' }}>{tipoBairro}</div>
