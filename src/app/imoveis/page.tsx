@@ -15,6 +15,7 @@ export const metadata: Metadata = {
 function paraVitrine(p: Property): Property {
   return {
     codigo: p.codigo,
+    exclusividade: p.exclusividade,
     titulo_anuncio: p.titulo_anuncio,
     contrato: p.contrato,
     tipo: p.tipo,

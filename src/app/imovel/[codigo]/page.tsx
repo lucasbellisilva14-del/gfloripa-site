@@ -251,7 +251,17 @@ export default async function ImovelPage({
             <Gallery images={property.imagens ?? []} contratoLabel={contratoLabel} />
 
             <div style={{ position: 'sticky', top: 80 }}>
-              <div style={{ fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: '#E8B23A' }}>{property.tipo} · {property.codigo}</div>
+              <div style={{ fontSize: 11, letterSpacing: '.16em', textTransform: 'uppercase', color: '#E8B23A', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                <span>{property.tipo} · {property.codigo}</span>
+                {property.exclusividade && (
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: '#F7EFDB', color: '#8A6400', borderRadius: 8, padding: '5px 11px', fontSize: 11.5, fontWeight: 700, textTransform: 'none', letterSpacing: 0 }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#C9941A" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6-5.4-2.9-5.4 2.9 1.1-6L3.2 9.4l6.1-.8z" />
+                    </svg>
+                    Exclusivo Nagamboa
+                  </span>
+                )}
+              </div>
               <h1 style={{ fontFamily: "'Marcellus',serif", fontSize: 34, lineHeight: 1.16, margin: '10px 0 8px' }}>{property.titulo_anuncio}</h1>
               <div style={{ fontSize: 14, color: 'rgba(255,255,255,.62)' }}>{localText}</div>
               <div style={{ fontFamily: "'Marcellus',serif", fontSize: 34, color: '#E8B23A', margin: '22px 0 4px' }}>{preco}</div>
