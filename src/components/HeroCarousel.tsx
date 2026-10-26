@@ -87,7 +87,7 @@ export default function HeroCarousel({ locais = [] }: { locais?: { bairro: strin
               backgroundSize: 'cover',
               opacity: i === current ? 1 : 0,
               transition: 'opacity 1.8s ease',
-              animation: `${s.anim} 20s ease-in-out infinite alternate`,
+              animation: i === current ? `${s.anim} 20s ease-in-out infinite alternate` : 'none',
             }}
           />
         </div>

@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import Script from "next/script";
 import ChatWidget from "@/components/ChatWidget";
+import RevealObserver from "@/components/RevealObserver";
 import { ADS_ID } from "@/lib/gtag";
 import "./globals.css";
 
@@ -68,6 +69,7 @@ export default function RootLayout({
             gtag('config', '${ADS_ID}');`}
         </Script>
         {children}
+        <RevealObserver />
         <ChatWidget />
       </body>
     </html>

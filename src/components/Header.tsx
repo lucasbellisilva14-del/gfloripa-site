@@ -35,8 +35,8 @@ export default function Header() {
           alignItems: 'center',
           justifyContent: 'space-between',
           padding: '16px 48px',
-          background: 'rgba(10,20,48,.86)',
-          backdropFilter: 'blur(14px)',
+          background: 'rgba(10,20,48,.93)',
+          backdropFilter: 'blur(7px)',
           borderBottom: '1px solid rgba(255,255,255,.08)',
         }}
       >
