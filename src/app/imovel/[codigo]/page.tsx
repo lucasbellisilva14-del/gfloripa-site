@@ -6,6 +6,7 @@ import Gallery from '@/components/Gallery'
 import InterestForm from '@/components/InterestForm'
 import { getProperty, getCorretorById, getAllProperties, formatPrice, type Property } from '@/lib/jetimob'
 import PropertyCard from '@/components/PropertyCard'
+import MapaImovel from '@/components/MapaImovel'
 
 const SITE_URL = 'https://www.nagamboaimoveis.com.br'
 
@@ -311,16 +312,15 @@ export default async function ImovelPage({
 
             <div>
               <h2 style={{ fontFamily: "'Marcellus',serif", fontSize: 24, marginBottom: 16 }}>Localização</h2>
-              <div style={{ height: 220, borderRadius: 14, background: 'linear-gradient(150deg,#12325A,#1E4D6B)', position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,.08)' }}>
-                <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 40px),repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 40px)' }} />
-                <div style={{ position: 'absolute', left: '50%', top: '48%', transform: 'translate(-50%,-50%)', textAlign: 'center' }}>
-                  <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#E8B23A', margin: '0 auto 6px', boxShadow: '0 0 0 8px rgba(232,178,58,.25)' }} />
-                  <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>{property.endereco_bairro}</div>
-                </div>
-              </div>
-              {(property.latitude || property.longitude) && (
-                <div style={{ fontSize: 12.5, color: 'rgba(255,255,255,.5)', marginTop: 10 }}>
-                  Lat {property.latitude} · Long {property.longitude}
+              {property.latitude && property.longitude ? (
+                <MapaImovel latitude={property.latitude} longitude={property.longitude} bairro={property.endereco_bairro} />
+              ) : (
+                <div style={{ height: 220, borderRadius: 14, background: 'linear-gradient(150deg,#12325A,#1E4D6B)', position: 'relative', overflow: 'hidden', border: '1px solid rgba(255,255,255,.08)' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'repeating-linear-gradient(0deg,rgba(255,255,255,.04) 0 1px,transparent 1px 40px),repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 1px,transparent 1px 40px)' }} />
+                  <div style={{ position: 'absolute', left: '50%', top: '48%', transform: 'translate(-50%,-50%)', textAlign: 'center' }}>
+                    <div style={{ width: 18, height: 18, borderRadius: '50%', background: '#E8B23A', margin: '0 auto 6px', boxShadow: '0 0 0 8px rgba(232,178,58,.25)' }} />
+                    <div style={{ fontSize: 12, color: 'rgba(255,255,255,.8)' }}>{property.endereco_bairro}</div>
+                  </div>
                 </div>
               )}
             </div>
