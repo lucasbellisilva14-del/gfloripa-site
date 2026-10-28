@@ -1,6 +1,6 @@
 'use client'
 
-export default function FaleComLia({ assunto }: { assunto: string }) {
+export default function FaleComLais({ assunto }: { assunto: string }) {
   return (
     <button
       onClick={() => window.dispatchEvent(new Event('nagamboa:abrir-chat'))}
@@ -13,7 +13,7 @@ export default function FaleComLia({ assunto }: { assunto: string }) {
     >
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src="/assets/lia.webp" alt="" style={{ width: 26, height: 26, borderRadius: '50%' }} />
-      Falar com a Lia sobre {assunto}
+      Falar com a Laís sobre {assunto}
     </button>
   )
 }

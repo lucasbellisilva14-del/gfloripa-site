@@ -6,7 +6,7 @@ import { trackLead, trackWhatsapp } from '@/lib/gtag'
 type Msg = { role: 'user' | 'assistant'; content: string }
 
 const WELCOME =
-  'Oi! Eu sou a Lia, assistente da Nagamboa Imóveis. 👋 Posso te ajudar a encontrar casas, apartamentos e terrenos em Garopaba e na Praia da Gamboa. O que você procura?'
+  'Oi! Eu sou a Laís, assistente da Nagamboa Imóveis. 👋 Posso te ajudar a encontrar casas, apartamentos e terrenos em Garopaba e na Praia da Gamboa. O que você procura?'
 
 // Converte /imovel/XXX e URLs em links clicáveis
 function renderContent(text: string) {
@@ -165,7 +165,7 @@ export default function ChatWidget() {
         .lia-convite { animation: liaConvite .5s ease-out, liaFlutua 3s ease-in-out .5s infinite; }
       `}</style>
 
-      {/* Convite da Lia */}
+      {/* Convite da Laís */}
       {teaser && !open && (
         <div
           className="lia-convite lia-teaser"
@@ -185,7 +185,7 @@ export default function ChatWidget() {
           </button>
           <div onClick={() => { setTeaser(false); setOpen(true) }} style={{ cursor: 'pointer' }}>
             <div style={{ fontSize: 13.5, color: '#fff', lineHeight: 1.45, paddingRight: 10 }}>
-              Oi! Eu sou a <strong style={{ color: '#E8B23A' }}>Lia</strong> 👋 Quer ajuda pra encontrar seu imóvel em Garopaba?
+              Oi! Eu sou a <strong style={{ color: '#E8B23A' }}>Laís</strong> 👋 Quer ajuda pra encontrar seu imóvel em Garopaba?
             </div>
             <div style={{ fontSize: 12, color: '#E8B23A', fontWeight: 600, marginTop: 7 }}>Conversar agora →</div>
           </div>
@@ -210,7 +210,7 @@ export default function ChatWidget() {
       >
         {open ? '×' : (
           // eslint-disable-next-line @next/next/no-img-element
-          <img src="/assets/lia.webp" alt="Lia, assistente virtual" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          <img src="/assets/lia.webp" alt="Laís, assistente virtual" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         )}
       </button>
 
@@ -227,9 +227,9 @@ export default function ChatWidget() {
         >
           <div style={{ padding: '14px 18px', background: '#10204A', borderBottom: '1px solid rgba(255,255,255,.1)', display: 'flex', alignItems: 'center', gap: 12 }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/assets/lia.webp" alt="Lia" style={{ width: 42, height: 42, borderRadius: '50%', border: '1.5px solid rgba(232,178,58,.7)' }} />
+            <img src="/assets/lia.webp" alt="Laís" style={{ width: 42, height: 42, borderRadius: '50%', border: '1.5px solid rgba(232,178,58,.7)' }} />
             <div>
-              <div style={{ fontFamily: "'Marcellus',serif", fontSize: 17 }}>Lia · Nagamboa Imóveis</div>
+              <div style={{ fontFamily: "'Marcellus',serif", fontSize: 17 }}>Laís · Nagamboa Imóveis</div>
               <div style={{ fontSize: 12, color: 'rgba(255,255,255,.6)' }}>Assistente virtual · Garopaba e Praia da Gamboa</div>
             </div>
           </div>
