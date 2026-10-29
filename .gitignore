@@ -42,3 +42,6 @@ next-env.d.ts
 
 # QA mobile (screenshots gerados pelo scripts/qa-mobile.mjs)
 /qa-screenshots/
+
+# Painel do Corretor: dados do adaptador em memória (modo demo, sem Supabase)
+/.painel-dados/

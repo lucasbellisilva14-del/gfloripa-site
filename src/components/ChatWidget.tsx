@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { trackLead, trackWhatsapp } from '@/lib/gtag'
 
 type Msg = { role: 'user' | 'assistant'; content: string }
@@ -24,6 +25,9 @@ function renderContent(text: string) {
 }
 
 export default function ChatWidget() {
+  // A Lia é do site público; dentro do painel interno (/painel) ela não aparece
+  const pathname = usePathname()
+  const noPainel = pathname?.startsWith('/painel') ?? false
   const [open, setOpen] = useState(false)
   const [msgs, setMsgs] = useState<Msg[]>([{ role: 'assistant', content: WELCOME }])
   const [input, setInput] = useState('')
@@ -135,6 +139,8 @@ export default function ChatWidget() {
       setBuscando(false)
     }
   }
+
+  if (noPainel) return null
 
   return (
     <>

@@ -36,6 +36,17 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
 - Destaques da home ranqueiam: exclusividade > terrenos > Mares > Gamboa.
 - Selo ★ EXCLUSIVO automático via campo exclusividade do painel.
 
+## Painel do Corretor com I.A. (/painel)
+
+- Área interna separada do site: src/app/(painel)/painel, src/app/api/painel,
+  src/lib/painel, src/components/painel. Protegida por src/proxy.ts (cookie
+  assinado) e senha única. Documentação completa em docs/painel/README.md;
+  padrão de atendimento que treina a I.A. em src/painel/padrao-atendimento.md.
+- Sem PAINEL_SENHA, SUPABASE_* e ANTHROPIC_API_KEY roda em modo demo (senha
+  "demo", dados de exemplo, análise fixa). Nunca pode quebrar o site público.
+- Testes: npm test (validador da análise) e node scripts/qa-painel.mjs (fluxo
+  completo com Playwright, servidor no ar).
+
 ## Variáveis de ambiente (.env.local, NUNCA commitar)
 
 - JETIMOB_API_URL=https://api.jetimob.com/webservice
@@ -46,6 +57,9 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
 - ANTHROPIC_API_KEY= (console.anthropic.com; alimenta a Lia)
 - NEXT_PUBLIC_ADS_LEAD_LABEL= (rótulo da conversão "Lead site" do Google Ads;
   pendente de configuração)
+- Painel: PAINEL_SENHA, PAINEL_SESSION_SECRET, SUPABASE_URL,
+  SUPABASE_SERVICE_ROLE_KEY, PAINEL_ANTHROPIC_MODEL (opcionais; ver
+  docs/painel/README.md)
 
 As mesmas variáveis existem na Vercel (Settings → Environment Variables);
 variável nova lá exige Redeploy.
