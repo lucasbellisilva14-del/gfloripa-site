@@ -18,8 +18,20 @@ export function modoDemoLogin(): boolean {
   return process.env.PAINEL_DEMO === '1' || process.env.NODE_ENV !== 'production'
 }
 
+// Variáveis que faltam para o login funcionar. Lista vazia = tudo certo.
+// Serve para a tela de login dizer exatamente o que configurar, em vez de
+// repetir a lista inteira: na Vercel o erro quase sempre é uma variável que
+// ficou só no ambiente Production, ou um Redeploy que não foi feito.
+export function variaveisFaltando(): string[] {
+  if (modoDemoLogin()) return []
+  const faltando: string[] = []
+  if (!process.env.PAINEL_SENHA) faltando.push('PAINEL_SENHA')
+  if (!process.env.PAINEL_SESSION_SECRET) faltando.push('PAINEL_SESSION_SECRET')
+  return faltando
+}
+
 export function loginDisponivel(): boolean {
-  return Boolean(process.env.PAINEL_SENHA) || modoDemoLogin()
+  return variaveisFaltando().length === 0
 }
 
 function segredo(): string | null {

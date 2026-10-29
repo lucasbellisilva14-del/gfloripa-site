@@ -1,10 +1,11 @@
 import Image from 'next/image'
 import LoginForm from '@/components/painel/LoginForm'
-import { loginDisponivel, modoDemoLogin } from '@/lib/painel/auth'
+import { loginDisponivel, modoDemoLogin, variaveisFaltando } from '@/lib/painel/auth'
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const { next } = await searchParams
   const disponivel = loginDisponivel()
+  const faltando = variaveisFaltando()
   return (
     <div className="painel-shell" data-tema="escuro" style={{ display: 'block' }}>
       <div className="p-login">
@@ -16,7 +17,14 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             <LoginForm demo={modoDemoLogin()} destino={next ?? '/painel'} />
           ) : (
             <div className="p-alert p-alert-warn">
-              Login indisponível: configure as variáveis <code>PAINEL_SENHA</code> e <code>PAINEL_SESSION_SECRET</code> no servidor (ver docs/painel/README.md).
+              Login indisponível. {faltando.length === 1 ? 'Falta a variável' : 'Faltam as variáveis'}{' '}
+              {faltando.map((v, i) => (
+                <span key={v}>
+                  {i > 0 ? ' e ' : ''}
+                  <code>{v}</code>
+                </span>
+              ))}{' '}
+              neste ambiente. Na Vercel, confira se ela está marcada para o ambiente deste endereço (Preview ou Production) e faça Redeploy depois de salvar. Detalhes em docs/painel/README.md.
             </div>
           )}
           <p style={{ color: 'rgba(255,255,255,.45)', fontSize: 12, marginTop: 22 }}>
