@@ -2,9 +2,9 @@
 // dependências novas e a API REST cobre tudo que o painel precisa.
 // Usa a service role key: esta camada só roda no servidor, atrás do login.
 
-import type { PainelDb } from './db'
+import type { PainelDb, PatchEstadoWhatsapp } from './db'
 import { normalizarTelefone, ordenarClientes } from './db'
-import type { Analise, Cliente, Conversa, ImovelInteresse, Lembrete } from './tipos'
+import type { Analise, ChatWhatsapp, Cliente, Conversa, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemRecebida, MensagemWhatsapp } from './tipos'
 
 type Linha = Record<string, unknown>
 
@@ -18,12 +18,16 @@ function cabecalhos(extra?: Record<string, string>): Record<string, string> {
   }
 }
 
-async function rest<T>(tabela: string, init: RequestInit & { query?: string; retorno?: boolean } = {}): Promise<T> {
+async function rest<T>(
+  tabela: string,
+  init: RequestInit & { query?: string; retorno?: boolean; prefer?: string } = {}
+): Promise<T> {
   const base = (process.env.SUPABASE_URL ?? '').replace(/\/$/, '')
   const url = `${base}/rest/v1/${tabela}${init.query ? `?${init.query}` : ''}`
+  const prefer = init.prefer ?? (init.retorno === false ? 'return=minimal' : 'return=representation')
   const res = await fetch(url, {
     ...init,
-    headers: cabecalhos(init.retorno === false ? { Prefer: 'return=minimal' } : { Prefer: 'return=representation' }),
+    headers: cabecalhos({ Prefer: prefer }),
     cache: 'no-store',
   })
   if (!res.ok) {
@@ -183,6 +187,133 @@ export function criarDbSupabase(): PainelDb {
       }).then((res) => {
         if (!res.ok) throw new Error(`Supabase upsert painel_config: ${res.status}`)
       })
+    },
+
+    // --- ponte do WhatsApp ---
+    async obterEstadoWhatsapp(corretorId) {
+      const linhas = await rest<EstadoWhatsapp[]>('whatsapp_estado', {
+        query: `select=*&corretor_id=eq.${q(corretorId)}&limit=1`,
+      })
+      return linhas[0] ?? null
+    },
+    async salvarEstadoWhatsapp(corretorId, patch: PatchEstadoWhatsapp) {
+      const atual = await this.obterEstadoWhatsapp(corretorId)
+      const corpo = {
+        corretor_id: corretorId,
+        status: patch.status ?? atual?.status ?? 'desconectado',
+        qr: patch.qr !== undefined ? patch.qr : (atual?.qr ?? null),
+        numero: patch.numero !== undefined ? patch.numero : (atual?.numero ?? null),
+        detalhe: patch.detalhe !== undefined ? patch.detalhe : (atual?.detalhe ?? null),
+        atualizado_em: new Date().toISOString(),
+      }
+      const linhas = await rest<EstadoWhatsapp[]>('whatsapp_estado', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=representation',
+        body: JSON.stringify(corpo),
+      })
+      return linhas[0] ?? (corpo as EstadoWhatsapp)
+    },
+    async obterSessaoWhatsapp(corretorId) {
+      const linhas = await rest<{ dados: unknown }[]>('whatsapp_sessao', {
+        query: `select=dados&corretor_id=eq.${q(corretorId)}&limit=1`,
+      })
+      return linhas[0]?.dados ?? null
+    },
+    async salvarSessaoWhatsapp(corretorId, dados) {
+      await rest('whatsapp_sessao', {
+        method: 'POST',
+        prefer: 'resolution=merge-duplicates,return=minimal',
+        retorno: false,
+        body: JSON.stringify({ corretor_id: corretorId, dados, atualizado_em: new Date().toISOString() }),
+      })
+    },
+    async apagarSessaoWhatsapp(corretorId) {
+      await rest('whatsapp_sessao', { method: 'DELETE', query: `corretor_id=eq.${q(corretorId)}`, retorno: false })
+    },
+    async registrarMensagensWhatsapp(corretorId, mensagens) {
+      const porChat = new Map<string, MensagemRecebida[]>()
+      for (const m of mensagens) {
+        const lista = porChat.get(m.wa_chat_id) ?? []
+        lista.push(m)
+        porChat.set(m.wa_chat_id, lista)
+      }
+      let novas = 0
+      for (const [waChatId, lista] of porChat) {
+        const achados = await rest<ChatWhatsapp[]>('whatsapp_chats', {
+          query: `select=*&corretor_id=eq.${q(corretorId)}&wa_chat_id=eq.${q(waChatId)}&limit=1`,
+        })
+        let chat = achados[0]
+        if (!chat) {
+          const criados = await rest<ChatWhatsapp[]>('whatsapp_chats', {
+            method: 'POST',
+            body: JSON.stringify({
+              corretor_id: corretorId,
+              wa_chat_id: waChatId,
+              nome: lista.find((m) => m.nome)?.nome ?? null,
+              telefone: normalizarTelefone(waChatId.split('@')[0]),
+            }),
+          })
+          chat = criados[0]
+        }
+        if (!chat) continue
+        // ignore-duplicates: mensagem repetida (mesmo wa_id) não é inserida de novo
+        const inseridas = await rest<MensagemWhatsapp[]>('whatsapp_mensagens', {
+          method: 'POST',
+          query: 'on_conflict=chat_id,wa_id',
+          prefer: 'resolution=ignore-duplicates,return=representation',
+          body: JSON.stringify(
+            lista.map((m) => ({
+              chat_id: chat.id,
+              corretor_id: corretorId,
+              wa_id: m.wa_id,
+              direcao: m.direcao,
+              autor: m.autor,
+              texto: m.texto,
+              data: m.data,
+            }))
+          ),
+        })
+        if (!inseridas.length) continue
+        novas += inseridas.length
+        const maisRecente = inseridas.reduce((a, b) => (a.data > b.data ? a : b))
+        const nome = chat.nome ?? lista.find((m) => m.nome)?.nome ?? null
+        await rest('whatsapp_chats', {
+          method: 'PATCH',
+          query: `id=eq.${q(chat.id)}`,
+          retorno: false,
+          body: JSON.stringify({
+            total_mensagens: chat.total_mensagens + inseridas.length,
+            ultima_mensagem_em:
+              !chat.ultima_mensagem_em || maisRecente.data > chat.ultima_mensagem_em ? maisRecente.data : chat.ultima_mensagem_em,
+            ultimo_texto: maisRecente.texto.slice(0, 160),
+            nome,
+          }),
+        })
+      }
+      return novas
+    },
+    async listarChatsWhatsapp(corretorId, incluirArquivados = false) {
+      const filtro = incluirArquivados ? '' : '&arquivado=is.false'
+      return rest<ChatWhatsapp[]>('whatsapp_chats', {
+        query: `select=*&corretor_id=eq.${q(corretorId)}${filtro}&order=ultima_mensagem_em.desc.nullslast`,
+      })
+    },
+    async obterChatWhatsapp(id) {
+      const linhas = await rest<ChatWhatsapp[]>('whatsapp_chats', { query: `select=*&id=eq.${q(id)}&limit=1` })
+      return linhas[0] ?? null
+    },
+    async listarMensagensDoChat(chatId, limite = 500) {
+      return rest<MensagemWhatsapp[]>('whatsapp_mensagens', {
+        query: `select=*&chat_id=eq.${q(chatId)}&order=data.asc&limit=${q(limite)}`,
+      })
+    },
+    async atualizarChatWhatsapp(id, patch) {
+      const linhas = await rest<ChatWhatsapp[]>('whatsapp_chats', {
+        method: 'PATCH',
+        query: `id=eq.${q(id)}`,
+        body: JSON.stringify(patch),
+      })
+      return linhas[0] ?? null
     },
   }
 }

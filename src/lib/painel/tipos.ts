@@ -184,3 +184,62 @@ export type AnaliseResultado = {
     observacoes: string
   }
 }
+
+// ---------------------------------------------------------------------------
+// Ponte do WhatsApp (somente leitura)
+// ---------------------------------------------------------------------------
+
+export type StatusWhatsapp = 'desconectado' | 'aguardando_qr' | 'conectando' | 'conectado'
+
+export const ROTULO_STATUS_WHATSAPP: Record<StatusWhatsapp, string> = {
+  desconectado: 'Desconectado',
+  aguardando_qr: 'Aguardando leitura do código',
+  conectando: 'Conectando',
+  conectado: 'Conectado',
+}
+
+export type EstadoWhatsapp = {
+  corretor_id: number
+  status: StatusWhatsapp
+  qr: string | null
+  numero: string | null
+  detalhe: string | null
+  atualizado_em: string
+}
+
+export type ChatWhatsapp = {
+  id: string
+  corretor_id: number
+  wa_chat_id: string
+  nome: string | null
+  telefone: string | null
+  cliente_id: string | null
+  total_mensagens: number
+  ultima_mensagem_em: string | null
+  ultimo_texto: string | null
+  arquivado: boolean
+  criado_em: string
+}
+
+export type MensagemWhatsapp = {
+  id: string
+  chat_id: string
+  corretor_id: number
+  wa_id: string
+  direcao: 'entrada' | 'saida'
+  autor: string | null
+  texto: string
+  data: string
+  criado_em: string
+}
+
+// Mensagem como a ponte envia ao painel.
+export type MensagemRecebida = {
+  wa_chat_id: string
+  wa_id: string
+  direcao: 'entrada' | 'saida'
+  nome: string | null
+  autor: string | null
+  texto: string
+  data: string
+}
