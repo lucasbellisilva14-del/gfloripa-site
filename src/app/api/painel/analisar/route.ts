@@ -1,7 +1,7 @@
 import { type NextRequest } from 'next/server'
 import { exigirCorretor } from '@/lib/painel/sessao'
-import { getDb } from '@/lib/painel/db'
-import { analisarConversa, iaDisponivel } from '@/lib/painel/analise'
+import { iaDisponivel } from '@/lib/painel/analise'
+import { analisarERegistrar } from '@/lib/painel/registrar-analise'
 import { ErroAnaliseInvalida } from '@/lib/painel/analise-schema'
 import { detectarDataConversa, extrairTexto } from '@/lib/painel/extrair-texto'
 import type { TipoCliente } from '@/lib/painel/tipos'
@@ -58,81 +58,33 @@ export async function POST(request: NextRequest) {
     : detectarDataConversa(texto) ?? new Date().toISOString().slice(0, 10)
   const origem = nomeArquivo ? 'arquivo' : String(form.get('origem') ?? 'colado')
 
-  let saida
+  let registro
   try {
-    saida = await analisarConversa({
-      conversa: texto,
+    registro = await analisarERegistrar({
+      corretor,
+      texto,
       dataConversa,
-      corretorNome: corretor.nome,
       clienteNome,
       clienteTelefone,
       codigoImovel,
       tipoCliente,
+      origem,
+      nomeArquivo,
     })
   } catch (err) {
     console.error('Painel: erro na análise:', err)
-    const msg = err instanceof ErroAnaliseInvalida ? 'A I.A. devolveu uma análise fora do formato esperado. Tente novamente.' : err instanceof Error ? err.message : 'Falha na análise'
+    const msg =
+      err instanceof ErroAnaliseInvalida
+        ? 'A I.A. devolveu uma análise fora do formato esperado. Tente novamente.'
+        : err instanceof Error
+          ? err.message
+          : 'Falha na análise'
     return Response.json({ error: msg }, { status: 502 })
   }
+
+  const { saida, cliente, analise } = registro
   avisos.push(...saida.avisos)
   if (saida.demo) avisos.unshift('Modo demonstração: ANTHROPIC_API_KEY não configurada. Este resultado é um exemplo fixo.')
-
-  // Persistência: cliente (por telefone, depois por nome), conversa, análise,
-  // imóveis de interesse. Lembretes só são criados quando o corretor clica.
-  const db = await getDb()
-  const r = saida.resultado
-  const nomeFinal = clienteNome ?? r.fatos.contato.nome ?? 'Cliente sem nome'
-  const telefoneFinal = clienteTelefone ?? r.fatos.contato.telefone
-  const tipoFinal: TipoCliente = tipoCliente !== 'indefinido' ? tipoCliente : deduzirTipo(texto)
-
-  let cliente = telefoneFinal ? await db.buscarClientePorTelefone(telefoneFinal, corretor.id) : null
-  if (!cliente && nomeFinal !== 'Cliente sem nome') cliente = await db.buscarClientePorNome(nomeFinal, corretor.id)
-  if (!cliente) {
-    cliente = await db.criarCliente({
-      corretor_id: corretor.id,
-      nome: nomeFinal,
-      telefone: telefoneFinal,
-      email: r.fatos.contato.email,
-      tipo: tipoFinal,
-      origem: nomeArquivo ? 'WhatsApp (arquivo)' : 'Conversa colada',
-    })
-  }
-
-  const conversa = await db.criarConversa({
-    cliente_id: cliente.id,
-    corretor_id: corretor.id,
-    texto,
-    data_conversa: `${dataConversa}T12:00:00.000Z`,
-    origem,
-    nome_arquivo: nomeArquivo,
-  })
-
-  const analise = await db.criarAnalise({
-    conversa_id: conversa.id,
-    cliente_id: cliente.id,
-    corretor_id: corretor.id,
-    resultado: r,
-    modelo: saida.modelo,
-    tokens_entrada: saida.tokensEntrada,
-    tokens_saida: saida.tokensSaida,
-    custo_usd: saida.custoUsd,
-    demo: saida.demo,
-  })
-
-  await db.atualizarCliente(cliente.id, {
-    temperatura: r.temperatura.nivel,
-    nota_temperatura: r.temperatura.nota,
-    estagio: r.estagio,
-    resumo: r.resumo,
-    ultima_interacao: conversa.data_conversa,
-    ...(cliente.tipo === 'indefinido' && tipoFinal !== 'indefinido' ? { tipo: tipoFinal } : {}),
-    ...(!cliente.telefone && telefoneFinal ? { telefone: telefoneFinal } : {}),
-    ...(!cliente.email && r.fatos.contato.email ? { email: r.fatos.contato.email } : {}),
-  })
-
-  const codigos = new Set(r.fatos.imoveis_citados)
-  if (codigoImovel) codigos.add(codigoImovel)
-  for (const codigo of codigos) await db.adicionarImovelInteresse(cliente.id, codigo, 'ia')
 
   return Response.json({
     ok: true,
@@ -143,12 +95,4 @@ export async function POST(request: NextRequest) {
     cliente_id: cliente.id,
     data_conversa: dataConversa,
   })
-}
-
-function deduzirTipo(texto: string): TipoCliente {
-  const t = texto.toLowerCase()
-  if (/\b(meu im[oó]vel|minha casa|meu apartamento|quero vender|quero alugar (minha|meu)|anunciar|exclusividade)\b/.test(t)) return 'proprietario'
-  if (/\b(temporada|di[aá]ria|r[eé]veillon|carnaval|alugar|aluguel|loca[cç][aã]o)\b/.test(t)) return 'locatario'
-  if (/\b(comprar|financiamento|financiar|entrada|fgts|[àa] vista|proposta)\b/.test(t)) return 'comprador'
-  return 'indefinido'
 }
