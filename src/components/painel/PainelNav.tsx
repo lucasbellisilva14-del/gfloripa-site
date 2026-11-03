@@ -5,11 +5,12 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { CorretorLogado } from '@/lib/painel/tipos'
-import { IconeAnalisar, IconeClientes, IconeConfig, IconeImoveis, IconeInicio, IconeLembretes } from './Icones'
+import { IconeAnalisar, IconeClientes, IconeConfig, IconeImoveis, IconeInicio, IconeLembretes, IconeWhatsapp } from './Icones'
 
 const LINKS = [
   { href: '/painel', rotulo: 'Início', Icone: IconeInicio },
   { href: '/painel/analisar', rotulo: 'Analisar conversa', Icone: IconeAnalisar },
+  { href: '/painel/whatsapp', rotulo: 'WhatsApp', Icone: IconeWhatsapp },
   { href: '/painel/clientes', rotulo: 'Clientes', Icone: IconeClientes },
   { href: '/painel/lembretes', rotulo: 'Lembretes', Icone: IconeLembretes },
   { href: '/painel/imoveis', rotulo: 'Meus imóveis', Icone: IconeImoveis },
