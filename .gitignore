@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Painel do Corretor: dados do adaptador em memória (modo demo, sem Supabase)
 /.painel-dados/
+
+# dependências dos serviços auxiliares (servicos/*)
+servicos/*/node_modules/
