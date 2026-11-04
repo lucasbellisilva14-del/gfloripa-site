@@ -44,6 +44,10 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
   padrão de atendimento que treina a I.A. em src/painel/padrao-atendimento.md.
 - Sem PAINEL_SENHA, SUPABASE_* e ANTHROPIC_API_KEY roda em modo demo (senha
   "demo", dados de exemplo, análise fixa). Nunca pode quebrar o site público.
+- A análise aceita texto colado e até 10 arquivos juntos: prints (lidos pela
+  visão do Claude, que devolve a transcrição no campo transcricao), .txt do
+  WhatsApp, .zip da exportação, .pdf, .md e .docx. Limite de 4 MB no total,
+  que é o teto de corpo das funções da Vercel.
 - Ponte do WhatsApp em servicos/whatsapp (Baileys, somente leitura, roda fora
   da Vercel porque precisa de socket aberto). Repassa mensagens ao painel por
   token (PAINEL_WHATSAPP_TOKEN). Nunca envia mensagem: é o que mais provoca

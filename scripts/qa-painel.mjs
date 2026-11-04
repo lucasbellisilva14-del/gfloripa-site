@@ -42,7 +42,28 @@ await page.screenshot({ path: `${OUT}/02-dashboard.png`, fullPage: true })
 
 // 4. analisar conversa (demo)
 await page.goto(`${BASE}/painel/analisar`)
-await page.click('text=Usar conversa de exemplo')
+
+// 4a. envio de arquivos: varios de uma vez, com print no meio
+// o input fica escondido pelo CSS da área de arrastar; basta estar no DOM
+await page.waitForSelector('#arquivo', { state: 'attached' })
+const pngMinimo = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+  'base64'
+)
+await page.setInputFiles('#arquivo', [
+  { name: 'conversa.txt', mimeType: 'text/plain', buffer: Buffer.from('[24/10/2026 09:12] Mariana: Bom dia!') },
+  { name: 'print.png', mimeType: 'image/png', buffer: pngMinimo },
+])
+ok((await page.$$('.p-list li')).length === 3, 'dois arquivos listados mais a linha de total')
+ok(await page.isVisible('text=A I.A. vai ler os prints'), 'aviso de print aparece')
+await page.click('li:has-text("print.png") button:has-text("Remover")')
+ok(!(await page.isVisible('text=A I.A. vai ler os prints')), 'remover o print tira o aviso')
+await page.click('button:has-text("Limpar tudo")')
+ok((await page.$$('.p-list li')).length === 0, 'limpar tudo esvazia a lista')
+await page.screenshot({ path: OUT + '/12-analisar-arquivos.png' })
+
+// 4b. analise a partir do texto de exemplo
+await page.click('button:has-text("Usar conversa de exemplo")')
 await page.fill('#cliente_nome', 'Mariana Costa')
 await page.fill('#cliente_telefone', '(54) 99911-0001')
 await page.click('button[type=submit]')
