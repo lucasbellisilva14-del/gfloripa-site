@@ -90,6 +90,7 @@ export default function AnaliseResultadoView({ analise, clienteNome, envioJetimo
   }
 
   const tudo = [
+    ...(r.transcricao ? [`TRANSCRIÇÃO\n${r.transcricao}`] : []),
     `RESUMO\n${r.resumo}`,
     `TEMPERATURA: ${ROTULO_TEMPERATURA[r.temperatura.nivel]} (${r.temperatura.nota}/100)\n${r.temperatura.justificativa}`,
     `ESTÁGIO: ${ROTULO_ESTAGIO[r.estagio]}`,
@@ -123,6 +124,19 @@ export default function AnaliseResultadoView({ analise, clienteNome, envioJetimo
       </div>
 
       {erro && <div className="p-alert p-alert-danger">{erro}</div>}
+
+      {r.transcricao && (
+        <section className="p-card">
+          <div className="p-card-head">
+            <h3>Transcrição lida dos prints</h3>
+            <CopiarBotao texto={r.transcricao} />
+          </div>
+          <p className="p-small p-muted" style={{ marginBottom: 8 }}>
+            Foi assim que a I.A. leu a conversa nas imagens. Confira valores, nomes e datas antes de usar o resto.
+          </p>
+          <pre className="p-pre p-mono" style={{ maxHeight: 320, overflow: 'auto' }}>{r.transcricao}</pre>
+        </section>
+      )}
 
       <div className="p-grid p-grid-2">
         <section className="p-card">
