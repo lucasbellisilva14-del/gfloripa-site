@@ -91,13 +91,17 @@ export function esquecerSaude() {
   global.__saudePonte = undefined
 }
 
-// Tenta executar o comando na hora. Devolve true se o serviço confirmou.
+// Tenta executar o comando na hora. Devolve true só se o serviço confirmou
+// de fato ({ ok: true }): um build antigo respondia 200 a qualquer rota sem
+// executar nada, e isso passava por sucesso.
 export async function comandoDireto(comando: ComandoWhatsapp): Promise<boolean> {
   if (!urlPonte()) return false
   esquecerSaude() // depois de um comando, a próxima leitura de saúde deve ser fresca
   try {
     const res = await chamarPonte('/comando', { method: 'POST', body: JSON.stringify({ comando }) })
-    return res.ok
+    if (!res.ok) return false
+    const b = (await res.json().catch(() => null)) as { ok?: unknown; comando?: unknown } | null
+    return b?.ok === true && b.comando === comando
   } catch {
     return false
   }

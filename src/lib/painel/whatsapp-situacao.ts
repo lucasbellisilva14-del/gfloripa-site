@@ -55,10 +55,15 @@ export type Leitura = {
   msSemPulso: number | null
   servicoVivo: boolean | null
   mostrarQr: boolean
+  // O serviço responde, mas sem versão nem diagnóstico: é um build anterior a
+  // 04/11/2026, ou seja, a hospedagem não reconstruiu depois dos últimos deploys.
+  desatualizado: boolean
 }
 
 export function situacaoWhatsapp(e: Entrada): Leitura {
-  if (!e.pontePronta) return { situacao: 'nao_configurado', verificacoes: [], msSemPulso: null, servicoVivo: null, mostrarQr: false }
+  if (!e.pontePronta) {
+    return { situacao: 'nao_configurado', verificacoes: [], msSemPulso: null, servicoVivo: null, mostrarQr: false, desatualizado: false }
+  }
 
   const statusInformado: StatusWhatsapp = e.estado?.status ?? 'desconectado'
   const relogioDesconhecido = !e.agoraMs
@@ -83,6 +88,11 @@ export function situacaoWhatsapp(e: Entrada): Leitura {
 
   const d = e.estado?.diagnostico ?? null
   const pareado = situacao === 'conectado'
+  // Versão antiga: o serviço novo sempre informa versão no /saude e manda
+  // diagnóstico em todo pulso. Sem nenhum dos dois, com o serviço vivo, a
+  // hospedagem está servindo um build anterior.
+  const desatualizado =
+    servicoVivo === true && ((diretoResponde && !e.saude!.versao) || (!diretoResponde && pulsoRecente && !d?.versao))
   const mostrarQr = situacao === 'aguardando_qr' && Boolean(e.estado?.qr)
   const apontaParaCa = d?.painel_url && e.origemPainel ? normalizar(d.painel_url) === normalizar(e.origemPainel) : null
   const conectadoHaMs = pareado && d?.desde && !relogioDesconhecido ? e.agoraMs - Date.parse(d.desde) : 0
@@ -91,12 +101,14 @@ export function situacaoWhatsapp(e: Entrada): Leitura {
     {
       chave: 'servico',
       rotulo: 'Serviço no ar',
-      ok: servicoVivo,
+      ok: desatualizado ? false : servicoVivo,
       detalhe:
         servicoVivo === null
           ? 'Ainda sem notícia do serviço.'
-          : servicoVivo
-            ? `${diretoResponde ? 'Respondendo agora' : `Último sinal há ${minutos(msSemPulso ?? 0)}`}${d?.versao ? `, versão ${d.versao}` : ''}${d?.desde ? `, no ar desde ${horaCurta(d.desde)}` : ''}.`
+          : desatualizado
+            ? 'Responde, mas numa versão antiga, sem número de versão nem diagnóstico. A hospedagem não reconstruiu o serviço depois dos últimos deploys: no Railway, confira se a última implantação é de hoje e, se não for, use Redeploy e veja o registro do build.'
+            : servicoVivo
+              ? `${diretoResponde ? 'Respondendo agora' : `Último sinal há ${minutos(msSemPulso ?? 0)}`}${(e.saude?.versao ?? d?.versao) ? `, versão ${e.saude?.versao ?? d?.versao}` : ''}${d?.desde ? `, no ar desde ${horaCurta(d.desde)}` : ''}.`
             : msSemPulso !== null
               ? `Último sinal há ${minutos(msSemPulso)}; ele avisa a cada 30 segundos.${e.saude?.erro ? ` Endereço direto: ${e.saude.erro}.` : ''}`
               : e.saude?.erro
@@ -172,7 +184,7 @@ export function situacaoWhatsapp(e: Entrada): Leitura {
     }
   )
 
-  return { situacao, verificacoes, msSemPulso, servicoVivo, mostrarQr }
+  return { situacao, verificacoes, msSemPulso, servicoVivo, mostrarQr, desatualizado }
 }
 
 function normalizar(u: string): string {

@@ -94,7 +94,7 @@ export default function WhatsappPainel(p: Props) {
     () => situacaoWhatsapp({ estado, saude, pontePronta: p.pontePronta, agoraMs: agora, origemPainel: origem, urlDireta: p.urlDireta }),
     [estado, saude, p.pontePronta, agora, origem, p.urlDireta]
   )
-  const { situacao, verificacoes, servicoVivo, mostrarQr } = leitura
+  const { situacao, verificacoes, servicoVivo, mostrarQr, desatualizado } = leitura
 
   // Um pedido é dado por atendido quando o efeito aparece (QR na tela, conexão
   // aberta, pulso novo). Isso é derivado do estado atual, não guardado: assim
@@ -291,6 +291,17 @@ export default function WhatsappPainel(p: Props) {
                 <strong>O serviço não está respondendo.</strong> Nenhuma das duas vias deu sinal: nem o endereço direto, nem o
                 sinal de vida que ele manda a cada 30 segundos. Os botões deixam o pedido na fila, mas ele só executa quando o
                 serviço voltar. Reinicie na hospedagem{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''} e veja os registros: a causa costuma estar na última linha.
+              </div>
+            )}
+
+            {desatualizado && (
+              <div className="p-alert p-alert-danger" style={{ marginBottom: 12 }}>
+                <strong>O serviço está rodando uma versão antiga.</strong> Ele responde, mas sem número de versão e sem o
+                diagnóstico que as versões atuais mandam a cada 30 segundos. Isso quer dizer que a hospedagem não reconstruiu o
+                serviço depois dos últimos deploys. Essa versão antiga ainda tem o defeito que descarta as mensagens que você
+                envia do celular. No Railway{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''}: aba
+                Deployments, confira a data da última implantação; use <strong>Redeploy</strong> e, se falhar, leia o registro do
+                build. Em Settings, o branch deve ser <code>main</code> e o Root Directory <code>servicos/whatsapp</code>.
               </div>
             )}
 
