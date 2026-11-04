@@ -307,7 +307,23 @@ export async function criarDbMemoria(): Promise<PainelDb> {
       return c
     },
     async definirComandoWhatsapp(corretorId, comando) {
-      const e = await this.salvarEstadoWhatsapp(corretorId, {})
+      estado.whatsapp_estado = estado.whatsapp_estado ?? []
+      let e = estado.whatsapp_estado.find((x) => x.corretor_id === corretorId)
+      if (!e) {
+        // linha criada sem pulso: atualizado_em antigo, para não passar por sinal de vida
+        e = {
+          corretor_id: corretorId,
+          status: 'desconectado',
+          qr: null,
+          numero: null,
+          detalhe: null,
+          comando: null,
+          comando_em: null,
+          diagnostico: null,
+          atualizado_em: new Date(0).toISOString(),
+        }
+        estado.whatsapp_estado.push(e)
+      }
       e.comando = comando
       e.comando_em = comando ? agoraIso() : null
       await persistir()
