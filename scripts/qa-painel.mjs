@@ -168,16 +168,37 @@ if (respEstado.ok) {
       data: new Date(t0 + i * 60000).toISOString(),
     })),
   })
+  // a tela confirma com window.confirm antes de parear de novo e de analisar em lote
+  page.on('dialog', (d) => d.accept())
   await page.goto(BASE + '/painel/whatsapp')
   await page.waitForSelector('h1')
-  ok(await page.isVisible('text=Conectado'), 'tela do WhatsApp mostra conexao ativa')
+  await page.waitForSelector('.p-checks li', { timeout: 15000 })
+  // Com WHATSAPP_PONTE_URL configurada e o servico fora do ar, a tela deve
+  // dizer isso em vez de confiar no "conectado" gravado no banco. Sem a URL,
+  // o pulso recem-publicado vale e a tela mostra Conectado.
+  const saude = await page.evaluate(() => fetch('/api/painel/whatsapp/saude').then((r) => r.json()))
+  const esperado = saude.direto_configurado && !saude.saude?.alcancavel ? 'Serviço fora do ar' : 'Conectado'
+  ok(await page.isVisible(`.p-badge:has-text("${esperado}")`), `tela do WhatsApp mostra "${esperado}"`)
+  ok((await page.$$('.p-checks li')).length === 5, 'cinco verificacoes de diagnostico na tela')
+  ok(await page.isVisible('button:has-text("Reconectar")'), 'botao Reconectar presente')
+  ok(await page.isVisible('button:has-text("Parear de novo")'), 'botao Parear de novo presente')
   ok((await page.$$('.p-list li')).length === 1, 'conversa capturada aparece na lista')
+  ok(await page.isVisible('.p-novas'), 'contador de mensagens novas aparece')
+  await page.click('.p-list button:has-text("Ler")')
+  await page.waitForSelector('.p-bolha')
+  ok((await page.$$('.p-bolha')).length === 5, 'Ler abre a conversa em baloes')
+  ok((await page.$$('.p-bolha-saida')).length === 2, 'mensagens do corretor ficam a direita')
   await page.screenshot({ path: OUT + '/10-whatsapp.png', fullPage: true })
-  await page.click('button:has-text("Analisar")')
+  await page.click('.p-list button:has-text("Analisar")')
   await page.waitForSelector('#resultado-wa', { timeout: 60000 })
   ok(await page.isVisible('text=mensagens analisadas'), 'analise da conversa do WhatsApp na tela')
-  ok(await page.isVisible('text=ficha do cliente'), 'conversa vira ficha de cliente')
+  ok(await page.isVisible('.p-list a:has-text("Ficha")'), 'conversa vira ficha de cliente')
+  ok(!(await page.isVisible('.p-novas')), 'apos analisar, nao ha mensagens novas')
   await page.screenshot({ path: OUT + '/11-whatsapp-analise.png', fullPage: true })
+  // comando pela tela: Verificar agora deixa o pedido e a tela avisa
+  await page.click('button:has-text("Verificar agora")')
+  await page.waitForSelector('.p-alert-info', { timeout: 10000 })
+  ok(true, 'Verificar agora envia comando e avisa')
 } else {
   ok(true, 'tela do WhatsApp pulada (PAINEL_WHATSAPP_TOKEN nao configurado)')
 }

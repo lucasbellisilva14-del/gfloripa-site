@@ -65,12 +65,16 @@ roteiro, caso um dia valha a troca.
 openssl rand -hex 32
 ```
 
-### 2. Aplicar a migration no Supabase
+### 2. Aplicar as migrations no Supabase
 
-No Supabase, em SQL Editor, New query, cole e rode o arquivo
-`supabase/migrations/20261103120000_painel_whatsapp.sql`. Ele cria quatro
-tabelas: `whatsapp_estado`, `whatsapp_sessao`, `whatsapp_chats` e
-`whatsapp_mensagens`.
+No Supabase, em SQL Editor, New query, cole e rode, nesta ordem:
+
+1. `supabase/migrations/20261103120000_painel_whatsapp.sql`: cria as quatro
+   tabelas (`whatsapp_estado`, `whatsapp_sessao`, `whatsapp_chats`,
+   `whatsapp_mensagens`).
+2. `supabase/migrations/20261104120000_painel_whatsapp_v2.sql`: adiciona o
+   canal de comando, o diagnóstico e o controle de mensagens novas por
+   conversa. Sem ela, os botões da tela e a contagem de novas não funcionam.
 
 ### 3. Configurar o painel na Vercel
 
@@ -112,13 +116,64 @@ começam a entrar conforme chegam mensagens novas.
 
 Se o código expirar, a tela busca outro sozinha.
 
+## Controle pela tela
+
+A tela `/painel/whatsapp` mostra a situação real do serviço e tem três botões:
+
+- **Verificar agora**: pede um sinal de vida imediato.
+- **Reconectar**: derruba e refaz a conexão com o WhatsApp, sem novo QR.
+- **Parear de novo**: encerra a sessão atual e gera um QR novo. Use quando
+  trocar de celular ou quando a sessão ficar inválida.
+
+Os comandos chegam ao serviço de dois jeitos. Pela **fila**, que funciona
+sempre: a tela grava o pedido e o serviço pergunta a cada 5 segundos se há
+algo. Ou **direto**, imediato: se o serviço tiver um domínio público na
+hospedagem e ele estiver em `WHATSAPP_PONTE_URL` na Vercel, o painel chama o
+serviço na hora e ainda mostra a saúde em tempo real, sem esperar o pulso.
+
+Para ligar o modo direto no Railway: no serviço, Settings, Networking,
+**Generate Domain**. Copie o endereço gerado (algo como
+`nagamboa-whatsapp-ponte-production.up.railway.app`) e coloque na Vercel:
+
+| Variável | Valor |
+| --- | --- |
+| `WHATSAPP_PONTE_URL` | `https://<dominio-gerado>` |
+| `WHATSAPP_HOSPEDAGEM_URL` | opcional: link do painel do Railway, vira o botão "abrir" quando o serviço cai |
+
+Redeploy na Vercel depois. O endereço de saúde do serviço (`/saude`) responde
+sem token e não expõe mensagem nenhuma, só status e contadores. O comando
+(`POST /comando`) exige o token.
+
+### A lista de verificações
+
+Abaixo do status aparecem cinco verificações, cada uma com o motivo:
+
+1. **Serviço no ar**: responde (direto) ou mandou sinal de vida nos últimos
+   95 segundos (ele avisa a cada 30).
+2. **Pareado com o WhatsApp**: há sessão aberta com o número.
+3. **Apontando para este painel**: o `PAINEL_URL` do serviço é o endereço da
+   tela aberta. Se estiver mandando para um preview ou para o endereço errado,
+   acusa aqui.
+4. **Vendo mensagens**: quantas a biblioteca entregou ao serviço desde que
+   subiu. Conectado há mais de dois minutos sem ver nenhuma é suspeito.
+5. **Entregando ao painel**: quantas chegaram ao painel e quantas falharam,
+   com o último erro.
+
+Com essas cinco é possível dizer onde a corrente quebrou sem abrir os
+registros da hospedagem. A linha de rodapé mostra a versão (commit) que o
+serviço está rodando, o que responde se o deploy novo já subiu.
+
 ## Uso no dia a dia
 
-Na tela `/painel/whatsapp` cada conversa mostra o nome do contato, quantas
-mensagens já foram capturadas e a última delas. O botão **Analisar** monta a
-transcrição e manda para a I.A., exatamente como se você tivesse colado o
-texto na tela de análise. O resultado é o mesmo: temperatura, fatos, insights,
-próxima mensagem, nota para o Jetimob e lembretes.
+Cada conversa mostra nome, telefone, a temperatura do cliente vinculado,
+quantas mensagens chegaram desde a última análise ("novas") e a última
+mensagem. **Ler** abre a conversa ali mesmo, em balões, para você conferir
+antes de gastar uma análise. **Analisar** monta a transcrição e manda para a
+I.A., exatamente como se você tivesse colado o texto na tela de análise. O
+resultado é o mesmo: temperatura, fatos, insights, próxima mensagem, nota
+para o Jetimob e lembretes. **Analisar todas com novidades** faz isso em
+sequência para todas as conversas com mensagens novas, com confirmação do
+custo antes. Há uma busca por nome, telefone ou trecho.
 
 Depois da primeira análise, a conversa fica ligada à ficha do cliente. As
 análises seguintes caem na mesma ficha, e a evolução da temperatura aparece
@@ -145,6 +200,15 @@ atenção:
 - As rotas da ponte são autenticadas por token, e as telas, por login.
 - Vale citar a finalidade na política de privacidade do site.
 
+## No deploy, duas instâncias por alguns segundos
+
+A hospedagem sobe a versão nova antes de derrubar a antiga. As duas tentam
+usar a mesma sessão, e o WhatsApp só aceita uma: a outra recebe "conexão
+substituída". A antiga, ao receber isso, **encerra em vez de reconectar**,
+senão derrubaria a nova e as duas ficariam se revezando para sempre. Nos
+registros aparece "outra instância do serviço assumiu a conexão". É normal
+uma vez por deploy.
+
 ## Problemas comuns
 
 **O código QR não aparece.** O serviço não está no ar, ou `PAINEL_URL` e
@@ -170,8 +234,15 @@ WhatsApp.
 Com o painel rodando em modo demonstração e o token configurado:
 
 ```bash
-node scripts/qa-whatsapp.mjs http://localhost:3000 token-de-teste
+node scripts/qa-whatsapp.mjs http://localhost:3000 token-de-teste   # rotas do painel, simulando o serviço
+node scripts/qa-ponte.mjs http://localhost:3000 token-de-teste      # o serviço de verdade, sem WhatsApp
 ```
+
+O segundo sobe `servicos/whatsapp/index.mjs` apontando para o painel local e
+confere pulso com diagnóstico, versão, endereço de saúde, comando direto e
+comando pela fila. A conexão com o WhatsApp falha de propósito; o que se testa
+é a conversa entre serviço e painel. Com `ESPERA_DIRETO=1` e o painel subido
+com `WHATSAPP_PONTE_URL=http://localhost:18080`, testa o caminho direto.
 
 São 23 verificações cobrindo recusa sem token, gravação de estado e sessão,
 descarte de grupos e mensagens vazias, bloqueio de duplicadas, análise de uma
