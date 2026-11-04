@@ -25,6 +25,7 @@ aparece em `/painel/whatsapp`, não no terminal.
 | `PAINEL_WHATSAPP_TOKEN` | sim | | Mesmo valor configurado na Vercel |
 | `PORTA` | não | 8080 | Porta do endereço de saúde |
 | `INTERVALO_ENVIO_MS` | não | 3000 | Agrupamento antes de enviar ao painel |
+| `JANELA_DIAS` | não | 7 | Quantos dias para trás aceitar ao conectar |
 | `LOG_LEVEL` | não | warn | Nível de registro da biblioteca |
 
 ## Por que fica fora da Vercel

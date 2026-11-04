@@ -24,10 +24,19 @@ O que a ponte captura:
 
 - mensagens recebidas e as que você envia pelo celular, em conversas de pessoa;
 - texto. Foto, áudio e documento viram uma marcação curta, como `[áudio]`,
-  para a conversa não ficar com buracos.
+  para a conversa não ficar com buracos;
+- o que ficou na fila enquanto o serviço esteve fora do ar, dentro da janela
+  de dias abaixo.
 
-O que ela ignora de propósito: grupos, listas de transmissão, status,
-mensagens antigas (só vale o que chega depois de conectar) e reações.
+O que ela ignora de propósito: grupos, listas de transmissão, status, canais
+e reações.
+
+**Janela de dias.** Ao conectar, o WhatsApp pode entregar de uma vez o que
+estava acumulado. A ponte aceita o que for dos últimos 7 dias e descarta o
+mais antigo, para não arrastar meses de conversa para dentro do painel. Dá
+para mudar com a variável `JANELA_DIAS` no serviço. Conversa anterior a essa
+janela não é importada: se quiser uma antiga no painel, exporte pelo WhatsApp
+e use a tela de analisar conversa.
 
 E o que ela nunca faz: enviar mensagem, entrar em grupo, marcar conversa como
 lida ou aparecer como online. Suas notificações continuam indo normalmente
@@ -146,8 +155,12 @@ registros no Railway: a ponte imprime o motivo.
 inválida. Desconecte o aparelho pelo celular, em Aparelhos conectados, e
 pareie de novo.
 
-**Conectou mas não chega mensagem.** Só entram mensagens novas, a partir do
-pareamento. Mande uma mensagem de teste para você mesmo de outro número.
+**Conectou mas não chega mensagem.** Primeiro confira os registros do Railway:
+a cada lote a ponte escreve uma linha como `lote notify: 1 aceita(s)`, ou diz
+o motivo de ter ignorado (`nao e conversa de pessoa`, `sem texto`, `fora da
+janela de dias`). Se não aparecer linha nenhuma, a conexão caiu. Lembre que
+grupos não entram, e que conversa mais antiga que a janela de dias é
+descartada.
 
 **Mensagens duplicadas.** Não acontece: o painel ignora pelo id da mensagem no
 WhatsApp.
