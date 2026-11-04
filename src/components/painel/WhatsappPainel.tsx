@@ -5,7 +5,7 @@ import Image from 'next/image'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Analise, ChatWhatsapp, EstadoWhatsapp } from '@/lib/painel/tipos'
 import { ROTULO_STATUS_WHATSAPP } from '@/lib/painel/tipos'
-import { formatarDataCurta, iniciais } from '@/lib/painel/formato'
+import { formatarData, formatarDataCurta, iniciais, paraData } from '@/lib/painel/formato'
 import AnaliseResultadoView from './AnaliseResultadoView'
 
 type Props = {
@@ -28,9 +28,13 @@ export default function WhatsappPainel({ estadoInicial, chatsIniciais, pontePron
   const [analisando, setAnalisando] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [resposta, setResposta] = useState<Resposta | null>(null)
+  // hora atual guardada em estado e renovada a cada verificação; lê-la direto
+  // na renderização deixaria o componente impuro
+  const [agora, setAgora] = useState(0)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const atualizar = useCallback(async () => {
+    setAgora(Date.now())
     try {
       const res = await fetch('/api/painel/whatsapp/chat', { cache: 'no-store' })
       if (!res.ok) return
@@ -94,14 +98,32 @@ export default function WhatsappPainel({ estadoInicial, chatsIniciais, pontePron
   }
 
   const status = estado?.status ?? 'desconectado'
-  const classeStatus = status === 'conectado' ? 'p-badge-ok' : status === 'desconectado' ? 'p-badge-danger' : 'p-badge-warn'
+
+  // O serviço manda um pulso a cada 2 minutos. Sem pulso recente, o estado
+  // guardado é só a última notícia que tivemos, e não prova que ele está de
+  // pé: pode ter caído sem conseguir avisar.
+  const atualizadoMs = paraData(estado?.atualizado_em)?.getTime() ?? 0
+  // agora === 0 na primeira renderização, antes da primeira verificação: sem
+  // relógio ainda, não acusamos ausência de pulso
+  const minutosSemPulso = agora && atualizadoMs ? Math.floor((agora - atualizadoMs) / 60000) : 0
+  const semNoticias = status === 'conectado' && minutosSemPulso > 5
+
+  const classeStatus = semNoticias
+    ? 'p-badge-warn'
+    : status === 'conectado'
+      ? 'p-badge-ok'
+      : status === 'desconectado'
+        ? 'p-badge-danger'
+        : 'p-badge-warn'
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
       <section className="p-card">
         <div className="p-card-head">
           <h2>Conexão</h2>
-          <span className={`p-badge ${classeStatus}`}>{ROTULO_STATUS_WHATSAPP[status]}</span>
+          <span className={`p-badge ${classeStatus}`}>
+            {semNoticias ? 'Sem notícias do serviço' : ROTULO_STATUS_WHATSAPP[status]}
+          </span>
         </div>
 
         {!pontePronta && (
@@ -133,10 +155,26 @@ export default function WhatsappPainel({ estadoInicial, chatsIniciais, pontePron
           </p>
         )}
 
-        {status === 'conectado' && (
+        {status === 'conectado' && !semNoticias && (
           <p className="p-muted">
             Conectado{estado?.numero ? ` ao número ${estado.numero}` : ''}. As conversas aparecem abaixo conforme chegam.
             O painel apenas lê: nenhuma mensagem é enviada por aqui, você responde pelo WhatsApp normal.
+          </p>
+        )}
+
+        {semNoticias && (
+          <div className="p-alert p-alert-warn">
+            O serviço informou que estava conectado, mas não dá sinal de vida{' '}
+            há {minutosSemPulso} minutos. Ele manda um
+            aviso a cada dois minutos, então provavelmente caiu ou foi reiniciado sem conseguir avisar. Confira os
+            registros do serviço na hospedagem. Enquanto isso, as mensagens novas não estão entrando aqui.
+          </div>
+        )}
+
+        {estado?.atualizado_em && (
+          <p className="p-small p-muted" style={{ marginTop: 8 }}>
+            Última notícia do serviço: {formatarData(estado.atualizado_em)}
+            {estado.detalhe ? ` · ${estado.detalhe}` : ''}
           </p>
         )}
       </section>

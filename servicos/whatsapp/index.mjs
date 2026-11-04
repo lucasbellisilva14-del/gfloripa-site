@@ -143,6 +143,8 @@ function montarAuth(salvo) {
 
 const fila = []
 let enviando = false
+let totalEnviadas = 0
+const INICIO = Date.now()
 
 async function escoarFila() {
   if (enviando || fila.length === 0) return
@@ -150,7 +152,9 @@ async function escoarFila() {
   const lote = fila.splice(0, 200)
   try {
     const r = await painel('entrada', { method: 'POST', body: JSON.stringify({ mensagens: lote }) })
-    if (r?.novas) diga(`${r.novas} mensagem(ns) nova(s) enviada(s) ao painel`)
+    totalEnviadas += lote.length
+    if (r?.novas) diga(`${r.novas} mensagem(ns) nova(s) gravada(s) no painel`)
+    else diga(`${lote.length} mensagem(ns) enviada(s), nenhuma nova (ja estavam no painel)`)
   } catch (err) {
     diga('falha ao enviar ao painel, tentando de novo depois:', err.message)
     fila.unshift(...lote) // devolve para a próxima rodada
@@ -160,6 +164,15 @@ async function escoarFila() {
 }
 
 setInterval(escoarFila, INTERVALO_ENVIO_MS)
+
+// Pulso: sem isto, o painel mostraria "Conectado" para sempre depois que o
+// serviço caísse, porque nada atualizaria aquele registro. A tela compara o
+// horário do último pulso com a hora atual para saber se ainda está de pé.
+const INTERVALO_PULSO_MS = Number(process.env.INTERVALO_PULSO_MS ?? 120000)
+setInterval(() => {
+  if (!socket?.user) return
+  publicarEstado({ status: 'conectado', numero: (socket.user.id ?? '').split(':')[0].split('@')[0] })
+}, INTERVALO_PULSO_MS)
 
 // --- conexão ---------------------------------------------------------------
 
@@ -197,7 +210,7 @@ async function conectar() {
 
     if (connection === 'open') {
       const numero = (socket.user?.id ?? '').split(':')[0].split('@')[0]
-      diga('conectado como', numero)
+      diga('conectado como', numero, `| janela de ${JANELA_DIAS} dia(s) | painel: ${PAINEL_URL}`)
       await publicarEstado({ status: 'conectado', qr: null, numero, detalhe: null })
     }
 
@@ -248,9 +261,18 @@ async function conectar() {
 // --- endereço de saúde (o Railway precisa de uma porta aberta) -------------
 
 createServer((req, res) => {
-  const vivo = Boolean(socket?.user)
-  res.writeHead(vivo ? 200 : 503, { 'content-type': 'application/json; charset=utf-8' })
-  res.end(JSON.stringify({ conectado: vivo, numero: socket?.user?.id?.split(':')[0] ?? null, fila: fila.length }))
+  // sempre 200: enquanto o QR não é lido o serviço está saudável, só não
+  // conectado, e um 503 aqui faria a hospedagem reiniciar tudo em laço
+  res.writeHead(200, { 'content-type': 'application/json; charset=utf-8' })
+  res.end(
+    JSON.stringify({
+      conectado: Boolean(socket?.user),
+      numero: socket?.user?.id?.split(':')[0] ?? null,
+      fila: fila.length,
+      mensagensEnviadas: totalEnviadas,
+      desde: new Date(INICIO).toISOString(),
+    })
+  )
 }).listen(PORTA, () => diga(`saúde em http://localhost:${PORTA}`))
 
 for (const sinal of ['SIGINT', 'SIGTERM']) {
