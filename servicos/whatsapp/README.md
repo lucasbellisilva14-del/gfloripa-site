@@ -40,6 +40,21 @@ aparece em `/painel/whatsapp`, não no terminal.
 Com o domínio público do serviço em `WHATSAPP_PONTE_URL` na Vercel, o painel
 usa esses endereços direto. Sem ele, o serviço consulta a fila do painel.
 
+## Railway: três ajustes que não vêm ligados
+
+1. **Root Directory** = `servicos/whatsapp` (Settings, Source). Sem isso o
+   Railway tenta construir o site inteiro.
+2. **Implantações automáticas ligadas** para o branch `main` (Settings,
+   Deploy triggers ou Automatic deployments). Vem desligado em alguns fluxos
+   de criação: o primeiro deploy acontece e os merges seguintes são
+   ignorados em silêncio. O sintoma no painel é "Serviço no ar" em vermelho
+   com o aviso de versão antiga.
+3. **Generate Domain** (Settings, Networking), para o painel chamar o serviço
+   direto via `WHATSAPP_PONTE_URL`.
+
+"Redeploy" em um deploy antigo reconstrói aquele mesmo commit; para subir o
+código atual é preciso um push novo no `main` ou um deploy manual.
+
 ## Por que fica fora da Vercel
 
 A conexão do WhatsApp é um socket que precisa ficar aberto. A Vercel executa

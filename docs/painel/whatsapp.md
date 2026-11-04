@@ -94,14 +94,19 @@ não está configurada e as rotas da ponte respondem 503.
 2. Em Settings do serviço, defina **Root Directory** como `servicos/whatsapp`.
    Isso faz o Railway instalar e rodar só a ponte, não o site.
 3. O comando de start já vem do `package.json` (`npm start`). Não precisa mexer.
-4. Em Variables, adicione:
+4. Ainda em Settings, confira que as **implantações automáticas** estão ligadas
+   para o branch `main` (Deploy triggers ou Automatic deployments). Em alguns
+   fluxos de criação isso vem desligado: o primeiro deploy sobe e os merges
+   seguintes são ignorados em silêncio, e o painel passa a acusar "versão
+   antiga".
+5. Em Variables, adicione:
 
 | Variável | Valor |
 | --- | --- |
 | `PAINEL_URL` | `https://www.nagamboaimoveis.com.br` |
 | `PAINEL_WHATSAPP_TOKEN` | o mesmo token do passo 1 |
 
-5. Opcional: `LOG_LEVEL=info` para ver mais detalhe nos registros, e
+6. Opcional: `LOG_LEVEL=info` para ver mais detalhe nos registros, e
    `INTERVALO_ENVIO_MS` para mudar o agrupamento de mensagens (padrão 3000 ms).
 
 O serviço abre uma porta de saúde que responde em `/` com o estado da
