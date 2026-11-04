@@ -63,8 +63,13 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: msg }, { status: 502 })
   }
 
-  // liga o chat ao cliente para as próximas análises caírem na mesma ficha
-  if (!chat.cliente_id) await db.atualizarChatWhatsapp(chat.id, { cliente_id: registro.cliente.id })
+  // liga o chat ao cliente para as próximas análises caírem na mesma ficha e
+  // marca até onde a conversa foi analisada, para a tela contar as novas
+  await db.atualizarChatWhatsapp(chat.id, {
+    cliente_id: chat.cliente_id ?? registro.cliente.id,
+    analisado_em: new Date().toISOString(),
+    mensagens_analisadas: chat.total_mensagens,
+  })
 
   const avisos = [...registro.saida.avisos]
   if (registro.saida.demo) avisos.unshift('Modo demonstração: ANTHROPIC_API_KEY não configurada. Este resultado é um exemplo fixo.')

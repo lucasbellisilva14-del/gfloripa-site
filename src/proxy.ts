@@ -6,7 +6,12 @@ import { COOKIE_SESSAO, verificarTokenSessao } from '@/lib/painel/auth'
 // responde 401. O site público não passa por aqui (ver matcher).
 // Rotas usadas pelo serviço ponte do WhatsApp: não têm cookie de sessão e se
 // autenticam por token (PAINEL_WHATSAPP_TOKEN) dentro da própria rota.
-const ROTAS_TOKEN = ['/api/painel/whatsapp/entrada', '/api/painel/whatsapp/estado', '/api/painel/whatsapp/sessao']
+const ROTAS_TOKEN = [
+  '/api/painel/whatsapp/entrada',
+  '/api/painel/whatsapp/estado',
+  '/api/painel/whatsapp/sessao',
+  '/api/painel/whatsapp/comando',
+]
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl
