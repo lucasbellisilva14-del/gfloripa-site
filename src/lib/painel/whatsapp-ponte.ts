@@ -11,7 +11,11 @@
 
 import type { ComandoWhatsapp } from './tipos'
 
-const TEMPO_LIMITE_MS = 4000
+const TEMPO_LIMITE_MS = 3000
+// A tela consulta a cada 2 s enquanto não está estável; sem cache, cada
+// consulta esperaria o tempo limite inteiro quando o endereço não responde.
+const CACHE_SAUDE_MS = 8000
+const global = globalThis as typeof globalThis & { __saudePonte?: { em: number; valor: SaudePonte | null } }
 
 export function urlPonte(): string | null {
   const u = (process.env.WHATSAPP_PONTE_URL ?? '').trim().replace(/\/$/, '')
@@ -47,8 +51,16 @@ async function chamarPonte(caminho: string, init: RequestInit = {}): Promise<Res
 }
 
 // Saúde em tempo real. Nunca lança: a tela precisa saber que não alcançou.
-export async function saudePonte(): Promise<SaudePonte | null> {
+export async function saudePonte(forcar = false): Promise<SaudePonte | null> {
   if (!urlPonte()) return null
+  const agora = Date.now()
+  if (!forcar && global.__saudePonte && agora - global.__saudePonte.em < CACHE_SAUDE_MS) return global.__saudePonte.valor
+  const valor = await consultarSaude()
+  global.__saudePonte = { em: agora, valor }
+  return valor
+}
+
+async function consultarSaude(): Promise<SaudePonte> {
   try {
     const res = await chamarPonte('/saude')
     if (!res.ok) return { alcancavel: false, conectado: false, numero: null, fila: 0, desde: null, versao: null, erro: `HTTP ${res.status}` }
@@ -70,14 +82,19 @@ export async function saudePonte(): Promise<SaudePonte | null> {
       fila: 0,
       desde: null,
       versao: null,
-      erro: err instanceof Error && err.name === 'AbortError' ? 'sem resposta em 4 segundos' : 'não alcançado',
+      erro: err instanceof Error && err.name === 'AbortError' ? 'sem resposta em 3 segundos' : 'não alcançado',
     }
   }
+}
+
+export function esquecerSaude() {
+  global.__saudePonte = undefined
 }
 
 // Tenta executar o comando na hora. Devolve true se o serviço confirmou.
 export async function comandoDireto(comando: ComandoWhatsapp): Promise<boolean> {
   if (!urlPonte()) return false
+  esquecerSaude() // depois de um comando, a próxima leitura de saúde deve ser fresca
   try {
     const res = await chamarPonte('/comando', { method: 'POST', body: JSON.stringify({ comando }) })
     return res.ok

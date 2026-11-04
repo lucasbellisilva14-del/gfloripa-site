@@ -33,6 +33,7 @@ export default async function WhatsappPage() {
         clientesIniciais={resumo}
         pontePronta={tokenConfigurado()}
         diretoConfigurado={Boolean(urlPonte())}
+        urlDireta={urlPonte()}
         hospedagemUrl={process.env.WHATSAPP_HOSPEDAGEM_URL?.trim() || null}
         envioJetimob={envioJetimobHabilitado()}
       />
