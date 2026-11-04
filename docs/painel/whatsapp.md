@@ -245,6 +245,14 @@ Source: branch `main` e Root Directory `servicos/whatsapp`. Para conferir à
 mão, abra `https://<dominio-do-servico>/saude` no navegador: o serviço atual
 devolve um campo `versao` com o commit em execução.
 
+**Conversas com o meu próprio nome.** Versões anteriores batizavam a conversa
+pelo nome de quem enviou a primeira mensagem capturada; quando era o corretor,
+a conversa ficava com o nome dele. Agora o nome vem da agenda do celular ou da
+outra pessoa, nunca de mensagem enviada por você, e as conversas antigas são
+corrigidas sozinhas quando o contato escreve ou quando a agenda chega. Para
+resolver na hora, use **Renomear** na linha da conversa; se a ficha do cliente
+nasceu com o nome errado, ela é corrigida junto.
+
 **O código QR não aparece.** O serviço não está no ar, ou `PAINEL_URL` e
 `PAINEL_WHATSAPP_TOKEN` não batem entre o Railway e a Vercel. Veja os
 registros no Railway: a ponte imprime o motivo.

@@ -121,5 +121,41 @@ r = await fetch(`${BASE}/api/painel/whatsapp/chat`, { headers: { cookie } })
 b = await r.json()
 ok(!(b.chats ?? []).some((c) => c.wa_chat_id === chat), 'conversa arquivada sai da lista')
 
+// 9. nome da conversa nunca é o do corretor; agenda e Renomear corrigem
+const chat2 = `55549${String(Date.now() + 7).slice(-7)}@s.whatsapp.net`
+const m2 = (i, direcao, nome, texto) => ({ wa_chat_id: chat2, wa_id: `${sufixo}-b${i}`, direcao, nome, autor: direcao === 'entrada' ? nome : null, texto, data: new Date(base + i * 60000).toISOString() })
+r = await ponte('entrada', { method: 'POST', body: JSON.stringify({ mensagens: [m2(1, 'saida', 'Lucas', 'Olá! Aqui é o Lucas da Nagamboa.')], meu_nome: 'Lucas' }) })
+b = await r.json()
+ok(b.novas === 1, 'conversa aberta por mensagem do corretor gravada')
+r = await fetch(`${BASE}/api/painel/whatsapp/chat`, { headers: { cookie } })
+b = await r.json()
+let c3 = (b.chats ?? []).find((c) => c.wa_chat_id === chat2)
+ok(Boolean(c3) && !c3.nome, `conversa aberta pelo corretor fica sem nome (nome=${c3?.nome})`)
+
+r = await ponte('entrada', { method: 'POST', body: JSON.stringify({ mensagens: [m2(2, 'entrada', 'Roberto', 'Oi Lucas, quero ver o terreno.')], meu_nome: 'Lucas' }) })
+r = await fetch(`${BASE}/api/painel/whatsapp/chat`, { headers: { cookie } })
+b = await r.json()
+c3 = (b.chats ?? []).find((c) => c.wa_chat_id === chat2)
+ok(c3?.nome === 'Roberto', `resposta do contato batiza a conversa (nome=${c3?.nome})`)
+
+r = await fetch(`${BASE}/api/painel/whatsapp/contatos`, { method: 'POST', body: '{}' })
+ok(r.status === 401 || r.status === 503, `contatos sem token recusado (${r.status})`)
+r = await ponte('contatos', { method: 'POST', body: JSON.stringify({ contatos: [{ wa_chat_id: chat2, nome: 'Roberto Silva' }, { wa_chat_id: chat2, nome: 'Lucas' }], meu_nome: 'Lucas' }) })
+b = await r.json()
+ok(r.ok && b.renomeadas === 1, `agenda renomeia a conversa e ignora o meu nome (renomeadas=${b.renomeadas})`)
+r = await fetch(`${BASE}/api/painel/whatsapp/chat`, { headers: { cookie } })
+b = await r.json()
+c3 = (b.chats ?? []).find((c) => c.wa_chat_id === chat2)
+ok(c3?.nome === 'Roberto Silva', `nome da agenda aplicado (nome=${c3?.nome})`)
+
+r = await fetch(`${BASE}/api/painel/whatsapp/chat`, {
+  method: 'PATCH',
+  headers: { 'content-type': 'application/json', cookie },
+  body: JSON.stringify({ chat_id: c3.id, nome: 'Roberto Comprador' }),
+})
+b = await r.json()
+ok(r.ok && b.chat?.nome === 'Roberto Comprador', 'Renomear pela tela')
+await fetch(`${BASE}/api/painel/whatsapp/chat`, { method: 'PATCH', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ chat_id: c3.id, arquivado: true }) })
+
 console.log(falhas ? `\n${falhas} falha(s)` : '\nTudo OK')
 process.exit(falhas ? 1 : 0)

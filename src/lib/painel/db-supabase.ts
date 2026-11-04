@@ -235,7 +235,10 @@ export function criarDbSupabase(): PainelDb {
     async apagarSessaoWhatsapp(corretorId) {
       await rest('whatsapp_sessao', { method: 'DELETE', query: `corretor_id=eq.${q(corretorId)}`, retorno: false })
     },
-    async registrarMensagensWhatsapp(corretorId, mensagens) {
+    async registrarMensagensWhatsapp(corretorId, mensagens, opcoes = {}) {
+      const meuNome = opcoes.meuNome?.trim() || null
+      // nome válido para batizar a conversa: só de mensagem da outra pessoa
+      const nomeValido = (m: MensagemRecebida) => (m.nome && m.nome !== meuNome && m.direcao === 'entrada' ? m.nome : null)
       const porChat = new Map<string, MensagemRecebida[]>()
       for (const m of mensagens) {
         const lista = porChat.get(m.wa_chat_id) ?? []
@@ -254,7 +257,7 @@ export function criarDbSupabase(): PainelDb {
             body: JSON.stringify({
               corretor_id: corretorId,
               wa_chat_id: waChatId,
-              nome: lista.find((m) => m.nome)?.nome ?? null,
+              nome: lista.map(nomeValido).find(Boolean) ?? null,
               telefone: normalizarTelefone(waChatId.split('@')[0]),
             }),
           })
@@ -278,10 +281,18 @@ export function criarDbSupabase(): PainelDb {
             }))
           ),
         })
-        if (!inseridas.length) continue
+        // conserta conversa batizada com o meu nome por engano, mesmo sem mensagem nova
+        const nomeAtual = meuNome && chat.nome === meuNome ? null : chat.nome
+        const nomeNovo = nomeAtual ?? lista.map(nomeValido).find(Boolean) ?? null
+        if (!inseridas.length) {
+          if (nomeNovo !== chat.nome) {
+            await rest('whatsapp_chats', { method: 'PATCH', query: `id=eq.${q(chat.id)}`, retorno: false, body: JSON.stringify({ nome: nomeNovo }) })
+          }
+          continue
+        }
         novas += inseridas.length
         const maisRecente = inseridas.reduce((a, b) => (a.data > b.data ? a : b))
-        const nome = chat.nome ?? lista.find((m) => m.nome)?.nome ?? null
+        const nome = nomeNovo
         await rest('whatsapp_chats', {
           method: 'PATCH',
           query: `id=eq.${q(chat.id)}`,
@@ -296,6 +307,20 @@ export function criarDbSupabase(): PainelDb {
         })
       }
       return novas
+    },
+    async renomearChatsWhatsapp(corretorId, contatos, meuNome) {
+      let n = 0
+      for (const c of contatos) {
+        const nome = c.nome?.trim()
+        if (!nome || (meuNome && nome === meuNome.trim())) continue
+        const linhas = await rest<{ id: string }[]>('whatsapp_chats', {
+          method: 'PATCH',
+          query: `corretor_id=eq.${q(corretorId)}&wa_chat_id=eq.${q(c.wa_chat_id)}&nome=neq.${q(nome)}`,
+          body: JSON.stringify({ nome }),
+        })
+        n += linhas.length
+      }
+      return n
     },
     async listarChatsWhatsapp(corretorId, incluirArquivados = false) {
       const filtro = incluirArquivados ? '' : '&arquivado=is.false'

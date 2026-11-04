@@ -133,7 +133,11 @@ export interface PainelDb {
   apagarSessaoWhatsapp(corretorId: number): Promise<void>
   // Grava as mensagens novas e devolve quantas foram realmente inseridas
   // (as repetidas são ignoradas pelo id do WhatsApp).
-  registrarMensagensWhatsapp(corretorId: number, mensagens: MensagemRecebida[]): Promise<number>
+  // meuNome: nome do próprio corretor no WhatsApp; conversas batizadas com ele
+  // por engano são corrigidas quando a outra pessoa escreve.
+  registrarMensagensWhatsapp(corretorId: number, mensagens: MensagemRecebida[], opcoes?: { meuNome?: string | null }): Promise<number>
+  // Nomes vindos da agenda do celular: renomeia as conversas existentes.
+  renomearChatsWhatsapp(corretorId: number, contatos: { wa_chat_id: string; nome: string }[], meuNome?: string | null): Promise<number>
   listarChatsWhatsapp(corretorId: number, incluirArquivados?: boolean): Promise<ChatWhatsapp[]>
   obterChatWhatsapp(id: string): Promise<ChatWhatsapp | null>
   listarMensagensDoChat(chatId: string, limite?: number): Promise<MensagemWhatsapp[]>

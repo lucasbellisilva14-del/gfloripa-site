@@ -239,18 +239,21 @@ export async function criarDbMemoria(): Promise<PainelDb> {
       if (estado.whatsapp_sessao) delete estado.whatsapp_sessao[String(corretorId)]
       await persistir()
     },
-    async registrarMensagensWhatsapp(corretorId, mensagens) {
+    async registrarMensagensWhatsapp(corretorId, mensagens, opcoes = {}) {
       estado.whatsapp_chats = estado.whatsapp_chats ?? []
       estado.whatsapp_mensagens = estado.whatsapp_mensagens ?? []
+      const meuNome = opcoes.meuNome?.trim() || null
       let novas = 0
       for (const m of mensagens) {
+        // nome vindo de mensagem minha é o meu nome, não o do contato
+        const nomeValido = m.nome && m.nome !== meuNome && m.direcao === 'entrada' ? m.nome : null
         let chat = estado.whatsapp_chats.find((c) => c.corretor_id === corretorId && c.wa_chat_id === m.wa_chat_id)
         if (!chat) {
           chat = {
             id: novoId(),
             corretor_id: corretorId,
             wa_chat_id: m.wa_chat_id,
-            nome: m.nome,
+            nome: nomeValido,
             telefone: normalizarTelefone(m.wa_chat_id.split('@')[0]),
             cliente_id: null,
             total_mensagens: 0,
@@ -281,10 +284,25 @@ export async function criarDbMemoria(): Promise<PainelDb> {
           chat.ultima_mensagem_em = m.data
           chat.ultimo_texto = m.texto.slice(0, 160)
         }
-        if (m.nome && !chat.nome) chat.nome = m.nome
+        // conserta conversa batizada com o meu nome por engano
+        if (meuNome && chat.nome === meuNome) chat.nome = null
+        if (nomeValido && !chat.nome) chat.nome = nomeValido
       }
       if (novas) await persistir()
       return novas
+    },
+    async renomearChatsWhatsapp(corretorId, contatos, meuNome) {
+      let n = 0
+      for (const c of contatos) {
+        const nome = c.nome?.trim()
+        if (!nome || (meuNome && nome === meuNome.trim())) continue
+        const chat = (estado.whatsapp_chats ?? []).find((x) => x.corretor_id === corretorId && x.wa_chat_id === c.wa_chat_id)
+        if (!chat || chat.nome === nome) continue
+        chat.nome = nome
+        n++
+      }
+      if (n) await persistir()
+      return n
     },
     async listarChatsWhatsapp(corretorId, incluirArquivados = false) {
       return (estado.whatsapp_chats ?? [])

@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
   const auth = exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
 
-  let body: { mensagens?: unknown }
+  let body: { mensagens?: unknown; meu_nome?: unknown }
   try {
     body = await request.json()
   } catch {
@@ -48,6 +48,7 @@ export async function POST(request: NextRequest) {
   if (!mensagens.length) return Response.json({ ok: true, novas: 0 })
 
   const db = await getDb()
-  const novas = await db.registrarMensagensWhatsapp(auth.corretor.id, mensagens)
+  const meuNome = typeof body.meu_nome === 'string' ? body.meu_nome.slice(0, 120) : null
+  const novas = await db.registrarMensagensWhatsapp(auth.corretor.id, mensagens, { meuNome })
   return Response.json({ ok: true, novas, recebidas: mensagens.length })
 }

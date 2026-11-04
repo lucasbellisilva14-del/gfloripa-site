@@ -11,6 +11,7 @@ const ROTAS_TOKEN = [
   '/api/painel/whatsapp/estado',
   '/api/painel/whatsapp/sessao',
   '/api/painel/whatsapp/comando',
+  '/api/painel/whatsapp/contatos',
 ]
 
 export async function proxy(request: NextRequest) {

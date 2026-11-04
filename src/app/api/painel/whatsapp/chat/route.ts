@@ -38,9 +38,17 @@ export async function PATCH(request: NextRequest) {
   if (!chat || chat.corretor_id !== auth.corretor.id) {
     return Response.json({ error: 'Conversa não encontrada' }, { status: 404 })
   }
+  const novoNome = body.nome?.trim() ? body.nome.trim().slice(0, 120) : null
   const atualizado = await db.atualizarChatWhatsapp(chat.id, {
     ...(typeof body.arquivado === 'boolean' ? { arquivado: body.arquivado } : {}),
-    ...(body.nome?.trim() ? { nome: body.nome.trim().slice(0, 120) } : {}),
+    ...(novoNome ? { nome: novoNome } : {}),
   })
+  // se a ficha do cliente nasceu com o nome errado desta conversa, corrige junto
+  if (novoNome && chat.cliente_id) {
+    const cliente = await db.obterCliente(chat.cliente_id)
+    if (cliente && (cliente.nome === chat.nome || cliente.nome === 'Cliente sem nome')) {
+      await db.atualizarCliente(cliente.id, { nome: novoNome })
+    }
+  }
   return Response.json({ ok: true, chat: atualizado })
 }
