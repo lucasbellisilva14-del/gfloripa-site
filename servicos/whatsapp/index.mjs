@@ -47,6 +47,10 @@ const PORTA = Number(process.env.PORTA ?? process.env.PORT ?? 8080)
 const INTERVALO_ENVIO_MS = Number(process.env.INTERVALO_ENVIO_MS ?? 3000)
 const INTERVALO_PULSO_MS = Number(process.env.INTERVALO_PULSO_MS ?? 30000)
 const INTERVALO_COMANDO_MS = Number(process.env.INTERVALO_COMANDO_MS ?? 5000)
+// Depois de um comando ou de uma mudança de conexão, o corretor costuma estar
+// olhando a tela: por dois minutos a fila é consultada a cada 1,5 s.
+const INTERVALO_COMANDO_ATENTO_MS = 1500
+const JANELA_ATENTA_MS = 2 * 60 * 1000
 const JANELA_DIAS = Number(process.env.JANELA_DIAS ?? JANELA_DIAS_PADRAO)
 // A hospedagem informa o commit em execução; é como a tela sabe se o deploy
 // novo já está no ar.
@@ -284,6 +288,7 @@ async function conectar() {
     const { connection, lastDisconnect, qr } = u
 
     if (qr) {
+      ficarAtento()
       diga('código QR gerado, aguardando leitura')
       const imagem = await QRCode.toDataURL(qr, { margin: 1, width: 400 }).catch(() => null)
       await publicarEstado({ status: 'aguardando_qr', qr: imagem, detalhe: null })
@@ -296,6 +301,7 @@ async function conectar() {
     }
 
     if (connection === 'close') {
+      ficarAtento()
       const codigo = lastDisconnect?.error?.output?.statusCode
       const motivo = Object.entries(DisconnectReason).find(([, v]) => v === codigo)?.[0] ?? String(codigo)
       diga('conexão encerrada:', motivo)
@@ -388,13 +394,24 @@ async function executarComando(comando, origem) {
   return false
 }
 
+let atentoAte = Date.now() + JANELA_ATENTA_MS // começa atento: acabou de subir
+
+function ficarAtento() {
+  atentoAte = Date.now() + JANELA_ATENTA_MS
+}
+
 async function consultarFilaDeComandos() {
   try {
     const { comando } = await painel('comando')
-    if (comando) await executarComando(comando, 'fila')
+    if (comando) {
+      ficarAtento()
+      await executarComando(comando, 'fila')
+    }
   } catch (err) {
     // o painel fora do ar já aparece nos outros registros; aqui só evitamos ruído
     if (!String(err.message).includes(' 404')) registrarErro(`fila de comandos: ${err.message}`)
+  } finally {
+    setTimeout(consultarFilaDeComandos, Date.now() < atentoAte ? INTERVALO_COMANDO_ATENTO_MS : INTERVALO_COMANDO_MS)
   }
 }
 
@@ -474,7 +491,7 @@ async function iniciar() {
   diga(`ponte versão ${VERSAO} iniciando | painel: ${PAINEL_URL}`)
   await conferirPainel()
   setInterval(() => publicarEstado({ status: estadoAtual() }), INTERVALO_PULSO_MS)
-  setInterval(consultarFilaDeComandos, INTERVALO_COMANDO_MS)
+  consultarFilaDeComandos()
   await conectar()
 }
 
