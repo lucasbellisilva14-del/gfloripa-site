@@ -1,5 +1,5 @@
 // Testes da leitura de situação do serviço do WhatsApp: é o que decide o
-// rótulo da tela, o aviso de serviço fora e a lista de verificações.
+// rótulo da tela, os avisos, se o QR aparece e a lista de verificações.
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { situacaoWhatsapp, LIMITE_SEM_PULSO_MS } from '../../src/lib/painel/whatsapp-situacao.ts'
@@ -33,7 +33,11 @@ const estado = (extra = {}) => ({
   ...extra,
 })
 
-const base = { pontePronta: true, agoraMs: AGORA, origemPainel: 'https://www.nagamboaimoveis.com.br', saude: null }
+const foraDoAr = { alcancavel: false, conectado: false, numero: null, fila: 0, desde: null, versao: null, erro: 'sem resposta em 3 segundos' }
+const vivoSemSessao = { alcancavel: true, conectado: false, numero: null, fila: 0, desde: iso(1000), versao: 'abc1234', erro: null }
+const vivoConectado = { ...vivoSemSessao, conectado: true, numero: '5548999990000' }
+
+const base = { pontePronta: true, agoraMs: AGORA, origemPainel: 'https://www.nagamboaimoveis.com.br', saude: null, urlDireta: 'https://ponte.up.railway.app' }
 const check = (r, chave) => r.verificacoes.find((v) => v.chave === chave)
 
 test('sem token configurado, situação é nao_configurado e sem verificações', () => {
@@ -45,29 +49,66 @@ test('sem token configurado, situação é nao_configurado e sem verificações'
 test('pulso recente e status conectado: conectado', () => {
   const r = situacaoWhatsapp({ ...base, estado: estado() })
   assert.equal(r.situacao, 'conectado')
+  assert.equal(r.servicoVivo, true)
   assert.equal(check(r, 'servico').ok, true)
   assert.equal(check(r, 'pareado').ok, true)
+  assert.equal(check(r, 'direto'), undefined, 'sem endereço direto não há verificação dele')
 })
 
-test('o defeito original: status diz conectado mas o pulso parou', () => {
+test('status diz conectado mas o pulso parou: sem notícias', () => {
   const r = situacaoWhatsapp({ ...base, estado: estado({ atualizado_em: iso(LIMITE_SEM_PULSO_MS + 1000) }) })
   assert.equal(r.situacao, 'sem_noticias')
-  assert.equal(check(r, 'servico').ok, false)
+  assert.equal(r.servicoVivo, false)
   assert.match(check(r, 'servico').detalhe, /Último sinal há/)
-  // pareado vira desconhecido: não dá para saber sem o serviço
   assert.equal(check(r, 'pareado').ok, null)
 })
 
-test('com domínio direto, a saúde em tempo real manda mais que o banco', () => {
-  const foraDoAr = { alcancavel: false, conectado: false, numero: null, fila: 0, desde: null, versao: null, erro: 'sem resposta em 4 segundos' }
-  const r1 = situacaoWhatsapp({ ...base, estado: estado(), saude: foraDoAr })
-  assert.equal(r1.situacao, 'servico_fora')
-  assert.match(check(r1, 'servico').detalhe, /sem resposta/)
+test('O CASO DA TELA: endereço direto não responde, mas o pulso é recente e há QR gravado', () => {
+  // Antes isto virava "Serviço fora do ar" e escondia o QR. O serviço estava
+  // vivo pela fila e tinha acabado de gerar o código.
+  const r = situacaoWhatsapp({ ...base, saude: foraDoAr, estado: estado({ status: 'aguardando_qr', qr: 'data:image/png;base64,x', numero: null }) })
+  assert.equal(r.servicoVivo, true, 'pulso recente prova que está vivo')
+  assert.equal(r.situacao, 'aguardando_qr')
+  assert.equal(r.mostrarQr, true, 'o QR tem que aparecer')
+  assert.equal(check(r, 'servico').ok, true)
+  assert.equal(check(r, 'direto').ok, false)
+  assert.match(check(r, 'direto').detalhe, /ponte\.up\.railway\.app/)
+  assert.match(check(r, 'direto').detalhe, /pela fila/)
+})
 
-  const vivoMasSemSessao = { alcancavel: true, conectado: false, numero: null, fila: 0, desde: iso(1000), versao: 'abc1234', erro: null }
-  const r2 = situacaoWhatsapp({ ...base, estado: estado({ status: 'aguardando_qr' }), saude: vivoMasSemSessao })
+test('endereço direto não responde e o pulso também parou: aí sim, serviço fora do ar', () => {
+  const r = situacaoWhatsapp({ ...base, saude: foraDoAr, estado: estado({ atualizado_em: iso(LIMITE_SEM_PULSO_MS + 1000) }) })
+  assert.equal(r.situacao, 'servico_fora')
+  assert.equal(r.servicoVivo, false)
+  assert.equal(r.mostrarQr, false)
+  assert.match(check(r, 'servico').detalhe, /Endereço direto: sem resposta/)
+})
+
+test('endereço direto responde: a saúde em tempo real manda', () => {
+  const r1 = situacaoWhatsapp({ ...base, saude: vivoConectado, estado: estado({ atualizado_em: iso(LIMITE_SEM_PULSO_MS + 60_000) }) })
+  assert.equal(r1.situacao, 'conectado', 'direto conectado vale mesmo com pulso velho')
+  assert.equal(check(r1, 'direto').ok, true)
+
+  const r2 = situacaoWhatsapp({ ...base, saude: vivoSemSessao, estado: estado({ status: 'aguardando_qr', qr: 'data:x' }) })
   assert.equal(r2.situacao, 'aguardando_qr')
-  assert.equal(check(r2, 'servico').ok, true)
+  assert.equal(r2.mostrarQr, true)
+
+  // banco atrasado dizendo conectado enquanto o serviço diz que não: conectando
+  const r3 = situacaoWhatsapp({ ...base, saude: vivoSemSessao, estado: estado({ status: 'conectado' }) })
+  assert.equal(r3.situacao, 'conectando')
+})
+
+test('QR gravado mas sem pulso recente nem direto: não mostra QR velho', () => {
+  const r = situacaoWhatsapp({ ...base, estado: estado({ status: 'aguardando_qr', qr: 'data:x', atualizado_em: iso(LIMITE_SEM_PULSO_MS + 1000) }) })
+  assert.equal(r.situacao, 'sem_noticias')
+  assert.equal(r.mostrarQr, false)
+})
+
+test('desconectado com serviço vivo: orienta a parear de novo', () => {
+  const r = situacaoWhatsapp({ ...base, estado: estado({ status: 'desconectado', numero: null }) })
+  assert.equal(r.situacao, 'desconectado')
+  assert.equal(r.servicoVivo, true)
+  assert.match(check(r, 'pareado').detalhe, /Parear de novo/)
 })
 
 test('aponta para outro painel: verificação de endereço falha com instrução', () => {
@@ -99,9 +140,22 @@ test('vê mensagens mas falha ao entregar: entrega falha e mostra o erro', () =>
   assert.match(check(r, 'entregando').detalhe, /401/)
 })
 
-test('tudo certo: cinco verificações verdes', () => {
+test('tudo certo, sem endereço direto: cinco verificações verdes', () => {
   const r = situacaoWhatsapp({ ...base, estado: estado({ diagnostico: diag({ vistas: 12, aceitas: 10, enviadas: 10 }) }) })
   assert.deepEqual(r.verificacoes.map((v) => v.ok), [true, true, true, true, true])
+})
+
+test('tudo certo, com endereço direto: seis verificações verdes', () => {
+  const r = situacaoWhatsapp({ ...base, saude: vivoConectado, estado: estado({ diagnostico: diag({ vistas: 12, aceitas: 10, enviadas: 10 }) }) })
+  assert.equal(r.verificacoes.length, 6)
+  assert.deepEqual(r.verificacoes.map((v) => v.ok), [true, true, true, true, true, true])
+})
+
+test('sem relógio (primeira renderização): confia no status e não acusa nada', () => {
+  const r = situacaoWhatsapp({ ...base, agoraMs: 0, estado: estado({ status: 'aguardando_qr', qr: 'data:x' }) })
+  assert.equal(r.situacao, 'aguardando_qr')
+  assert.equal(r.mostrarQr, true)
+  assert.equal(r.servicoVivo, null)
 })
 
 test('nunca houve notícia: desconectado, sem acusar pulso perdido', () => {

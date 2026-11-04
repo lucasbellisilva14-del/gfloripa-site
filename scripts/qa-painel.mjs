@@ -173,13 +173,32 @@ if (respEstado.ok) {
   await page.goto(BASE + '/painel/whatsapp')
   await page.waitForSelector('h1')
   await page.waitForSelector('.p-checks li', { timeout: 15000 })
-  // Com WHATSAPP_PONTE_URL configurada e o servico fora do ar, a tela deve
-  // dizer isso em vez de confiar no "conectado" gravado no banco. Sem a URL,
-  // o pulso recem-publicado vale e a tela mostra Conectado.
+  // O pulso acabou de ser publicado, entao o servico esta vivo por essa via.
+  // Mesmo com WHATSAPP_PONTE_URL configurada e sem resposta no endereco direto,
+  // a tela deve confiar no pulso e mostrar Conectado; o endereco direto vira
+  // uma verificacao reprovada, nao um "fora do ar".
   const saude = await page.evaluate(() => fetch('/api/painel/whatsapp/saude').then((r) => r.json()))
-  const esperado = saude.direto_configurado && !saude.saude?.alcancavel ? 'Serviço fora do ar' : 'Conectado'
-  ok(await page.isVisible(`.p-badge:has-text("${esperado}")`), `tela do WhatsApp mostra "${esperado}"`)
-  ok((await page.$$('.p-checks li')).length === 5, 'cinco verificacoes de diagnostico na tela')
+  ok(await page.isVisible('.p-badge:has-text("Conectado")'), 'tela do WhatsApp mostra Conectado com pulso recente')
+  const esperadas = saude.direto_configurado ? 6 : 5
+  ok((await page.$$('.p-checks li')).length === esperadas, `${esperadas} verificacoes de diagnostico na tela`)
+  if (saude.direto_configurado && !saude.saude?.alcancavel) {
+    ok(await page.isVisible('text=endereço direto não responde'), 'endereco direto reprovado sem derrubar o status')
+  }
+
+  // O CASO RELATADO: servico vivo, sessao encerrada pelo celular, QR novo
+  // gravado. A tela tem que mostrar o QR e oferecer o pareamento.
+  const pngMinimoQr = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+  await ponte('estado', { status: 'aguardando_qr', qr: pngMinimoQr, numero: null })
+  // Conectado, a tela consulta a cada 10 s; "Verificar agora" liga a consulta
+  // por segundo, que e o que o corretor faria ao estranhar a demora.
+  await page.click('button:has-text("Verificar agora")')
+  await page.waitForSelector('img[alt="Código QR para conectar o WhatsApp"]', { timeout: 25000 })
+  ok(true, 'QR aparece quando o servico esta vivo e aguardando leitura')
+  ok(await page.isVisible('.p-badge:has-text("Aguardando leitura do código")'), 'status acompanha o QR')
+  ok(await page.isVisible('button:has-text("Parear de novo")'), 'botao de parear continua disponivel')
+  await ponte('estado', { status: 'conectado', qr: null, numero: '5548999990000' })
+  await page.waitForSelector('.p-badge:has-text("Conectado")', { timeout: 25000 })
+  ok(true, 'volta a Conectado quando o servico avisa')
   ok(await page.isVisible('button:has-text("Reconectar")'), 'botao Reconectar presente')
   ok(await page.isVisible('button:has-text("Parear de novo")'), 'botao Parear de novo presente')
   ok((await page.$$('.p-list li')).length === 1, 'conversa capturada aparece na lista')
@@ -195,10 +214,14 @@ if (respEstado.ok) {
   ok(await page.isVisible('.p-list a:has-text("Ficha")'), 'conversa vira ficha de cliente')
   ok(!(await page.isVisible('.p-novas')), 'apos analisar, nao ha mensagens novas')
   await page.screenshot({ path: OUT + '/11-whatsapp-analise.png', fullPage: true })
-  // comando pela tela: Verificar agora deixa o pedido e a tela avisa
+  // comando pela tela: Verificar agora deixa o pedido e a tela avisa com contador
   await page.click('button:has-text("Verificar agora")')
   await page.waitForSelector('.p-alert-info', { timeout: 10000 })
-  ok(true, 'Verificar agora envia comando e avisa')
+  ok(await page.isVisible('text=Atualizando a cada segundo'), 'Verificar agora avisa e acompanha com contador')
+  // o servico (simulado) responde publicando estado: o aviso some sozinho
+  await ponte('estado', { status: 'conectado' })
+  await page.waitForFunction(() => !document.body.textContent.includes('Atualizando a cada segundo'), null, { timeout: 15000 })
+  ok(true, 'aviso do comando some quando o pedido e atendido')
 } else {
   ok(true, 'tela do WhatsApp pulada (PAINEL_WHATSAPP_TOKEN nao configurado)')
 }

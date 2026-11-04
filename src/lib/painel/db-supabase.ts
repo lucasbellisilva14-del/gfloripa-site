@@ -320,7 +320,14 @@ export function criarDbSupabase(): PainelDb {
       return linhas[0] ?? null
     },
     async definirComandoWhatsapp(corretorId, comando) {
-      await this.salvarEstadoWhatsapp(corretorId, {}) // garante a linha
+      // garante a linha sem tocar em atualizado_em (que é o pulso do serviço):
+      // insere só se não existir, com data antiga para não valer como sinal de vida
+      await rest('whatsapp_estado', {
+        method: 'POST',
+        prefer: 'resolution=ignore-duplicates,return=minimal',
+        retorno: false,
+        body: JSON.stringify({ corretor_id: corretorId, status: 'desconectado', atualizado_em: new Date(0).toISOString() }),
+      })
       await rest('whatsapp_estado', {
         method: 'PATCH',
         query: `corretor_id=eq.${q(corretorId)}`,

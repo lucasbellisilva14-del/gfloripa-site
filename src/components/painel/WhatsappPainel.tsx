@@ -18,6 +18,7 @@ type Props = {
   clientesIniciais: Record<string, ResumoCliente>
   pontePronta: boolean
   diretoConfigurado: boolean
+  urlDireta: string | null
   hospedagemUrl: string | null
   envioJetimob: boolean
 }
@@ -28,6 +29,15 @@ type Resposta = {
   demo: boolean
   mensagens_analisadas: number
 }
+
+const NOMES_COMANDO: Record<ComandoWhatsapp, string> = {
+  pulso: 'Verificação',
+  reconectar: 'Reconexão',
+  parear_novamente: 'Novo pareamento',
+}
+
+// Por quanto tempo, depois de um comando, a tela consulta a cada segundo.
+const RAJADA_MS = 25_000
 
 const novasDe = (c: ChatWhatsapp) => Math.max(0, c.total_mensagens - (c.mensagens_analisadas ?? 0))
 
@@ -44,17 +54,25 @@ export default function WhatsappPainel(p: Props) {
   const [analisando, setAnalisando] = useState<string | null>(null)
   const [loteRestante, setLoteRestante] = useState(0)
   const [executando, setExecutando] = useState<ComandoWhatsapp | null>(null)
+  // último comando enviado e quando: controla a rajada de consultas e o aviso
+  // noticiaAntes: a última notícia do serviço no momento do pedido; um pulso é
+  // dado por atendido quando chega uma notícia diferente dela (não depende de
+  // comparar relógio do navegador com relógio do servidor)
+  const [pedido, setPedido] = useState<{ comando: ComandoWhatsapp; em: number; via: 'direto' | 'fila'; noticiaAntes: string | null } | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
   const [erro, setErro] = useState<string | null>(null)
   const [resposta, setResposta] = useState<Resposta | null>(null)
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const frescoAte = useRef(0)
 
   const atualizar = useCallback(async () => {
-    setAgora(Date.now())
+    const t = Date.now()
+    setAgora(t)
     setOrigem(window.location.origin)
+    const fresco = t < frescoAte.current ? '?fresco=1' : ''
     try {
       const [rs, rc] = await Promise.all([
-        fetch('/api/painel/whatsapp/saude', { cache: 'no-store' }),
+        fetch(`/api/painel/whatsapp/saude${fresco}`, { cache: 'no-store' }),
         fetch('/api/painel/whatsapp/chat', { cache: 'no-store' }),
       ])
       if (rs.ok) {
@@ -72,17 +90,30 @@ export default function WhatsappPainel(p: Props) {
     }
   }, [])
 
-  const { situacao, verificacoes, msSemPulso } = useMemo(
-    () => situacaoWhatsapp({ estado, saude, pontePronta: p.pontePronta, agoraMs: agora, origemPainel: origem }),
-    [estado, saude, p.pontePronta, agora, origem]
+  const leitura = useMemo(
+    () => situacaoWhatsapp({ estado, saude, pontePronta: p.pontePronta, agoraMs: agora, origemPainel: origem, urlDireta: p.urlDireta }),
+    [estado, saude, p.pontePronta, agora, origem, p.urlDireta]
   )
+  const { situacao, verificacoes, servicoVivo, mostrarQr } = leitura
 
-  // Primeira atualização logo ao montar; depois, enquanto não está estável,
-  // a cada 4 s (o QR expira rápido e os comandos precisam refletir logo), e
-  // conectado a cada 15 s. Tudo dentro do mesmo temporizador, para a
-  // atualização nunca rodar de forma síncrona no corpo do efeito.
+  // Um pedido é dado por atendido quando o efeito aparece (QR na tela, conexão
+  // aberta, pulso novo). Isso é derivado do estado atual, não guardado: assim
+  // a rajada e o aviso somem sozinhos, sem precisar de efeito para limpar.
+  const pedidoAtivo = useMemo(() => {
+    if (!pedido) return null
+    const atendido =
+      (pedido.comando === 'parear_novamente' && mostrarQr) ||
+      (pedido.comando === 'reconectar' && situacao === 'conectado') ||
+      (pedido.comando === 'pulso' && Boolean(estado?.atualizado_em) && estado!.atualizado_em !== pedido.noticiaAntes)
+    return atendido ? null : pedido
+  }, [pedido, mostrarQr, situacao, estado])
+
+  // Ritmo das consultas: 1 s nos 25 s seguintes a um comando, 2 s enquanto a
+  // conexão não está estável (QR, reconexão), 10 s quando conectado. Tudo no
+  // mesmo temporizador, para a atualização nunca rodar síncrona no efeito.
+  const emRajada = pedidoAtivo !== null && agora !== 0 && agora - pedidoAtivo.em < RAJADA_MS
   useEffect(() => {
-    const intervalo = situacao === 'conectado' ? 15000 : 4000
+    const intervalo = emRajada ? 1000 : situacao === 'conectado' ? 10000 : 2000
     const ciclo = (atraso: number) => {
       timer.current = setTimeout(async () => {
         await atualizar()
@@ -95,7 +126,7 @@ export default function WhatsappPainel(p: Props) {
     }
     // agora só importa para disparar a primeira rodada sem espera
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [situacao, atualizar])
+  }, [situacao, emRajada, atualizar])
 
   async function comandar(comando: ComandoWhatsapp) {
     if (comando === 'parear_novamente' && !window.confirm('Isso desconecta o WhatsApp atual e pede um código QR novo. Continuar?')) return
@@ -113,13 +144,14 @@ export default function WhatsappPainel(p: Props) {
         setErro(b.error ?? `Erro ${res.status}`)
         return
       }
-      const nomes: Record<ComandoWhatsapp, string> = { pulso: 'Verificação', reconectar: 'Reconexão', parear_novamente: 'Novo pareamento' }
-      if (b.via === 'direto') setAviso(`${nomes[comando]} enviada ao serviço. Atualizando...`)
-      else if (situacao === 'servico_fora' || situacao === 'sem_noticias') {
-        setAviso(`${nomes[comando]} deixada na fila, mas o serviço não está respondendo: ele só vai executar quando voltar. Se não voltar sozinho, reinicie na hospedagem.`)
-      } else setAviso(`${nomes[comando]} deixada na fila. O serviço pega em até 5 segundos.`)
-      setTimeout(atualizar, 2500)
-      setTimeout(atualizar, 7000)
+      const em = Date.now()
+      frescoAte.current = em + RAJADA_MS
+      setPedido({ comando, em, via: b.via, noticiaAntes: estado?.atualizado_em ?? null })
+      const nome = NOMES_COMANDO[comando]
+      if (b.via === 'direto') setAviso(`${nome} enviada ao serviço agora. Acompanhando a resposta...`)
+      else if (servicoVivo === false) setAviso(`${nome} deixada na fila. O serviço não está respondendo, então só vai executar quando voltar.`)
+      else setAviso(`${nome} deixada na fila. O serviço pega em poucos segundos; a tela está acompanhando.`)
+      atualizar()
     } catch {
       setErro('Falha de rede ao enviar o comando.')
     } finally {
@@ -214,7 +246,11 @@ export default function WhatsappPainel(p: Props) {
     sem_noticias: 'p-badge-danger',
     nao_configurado: 'p-badge-neutro',
   }
-  const servicoNaoResponde = situacao === 'servico_fora' || situacao === 'sem_noticias'
+  const servicoMorto = servicoVivo === false
+  const diretoFalhou = saude !== null && !saude.alcancavel && servicoVivo === true
+  const segundosDesdePedido = pedidoAtivo && agora ? Math.round((agora - pedidoAtivo.em) / 1000) : 0
+  // o aviso do comando só vale enquanto o pedido não foi atendido
+  const avisoVisivel = aviso && (pedido === null || pedidoAtivo !== null) ? aviso : null
 
   return (
     <div style={{ display: 'grid', gap: 16 }}>
@@ -235,9 +271,9 @@ export default function WhatsappPainel(p: Props) {
 
         {situacao !== 'nao_configurado' && (
           <>
-            {situacao === 'aguardando_qr' && estado?.qr && (
+            {mostrarQr && (
               <div className="p-row" style={{ alignItems: 'flex-start', gap: 20, marginBottom: 14 }}>
-                <Image src={estado.qr} alt="Código QR para conectar o WhatsApp" width={240} height={240} unoptimized style={{ background: '#fff', padding: 10, borderRadius: 12 }} />
+                <Image src={estado!.qr!} alt="Código QR para conectar o WhatsApp" width={240} height={240} unoptimized style={{ background: '#fff', padding: 10, borderRadius: 12 }} />
                 <div style={{ maxWidth: 420 }}>
                   <h3>Conecte o seu WhatsApp</h3>
                   <ol className="p-bullets" style={{ paddingLeft: 20 }}>
@@ -250,12 +286,19 @@ export default function WhatsappPainel(p: Props) {
               </div>
             )}
 
-            {servicoNaoResponde && (
+            {servicoMorto && (
               <div className="p-alert p-alert-danger" style={{ marginBottom: 12 }}>
-                <strong>O serviço não está respondendo</strong>
-                {msSemPulso !== null && situacao === 'sem_noticias' ? ` há ${Math.round(msSemPulso / 60000)} minuto(s)` : ''}.
-                {' '}Os botões abaixo deixam o pedido na fila, mas ele só executa quando o serviço voltar. Se não voltar sozinho em
-                um minuto, reinicie na hospedagem{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''} e veja os registros: a causa costuma estar na última linha.
+                <strong>O serviço não está respondendo.</strong> Nenhuma das duas vias deu sinal: nem o endereço direto, nem o
+                sinal de vida que ele manda a cada 30 segundos. Os botões deixam o pedido na fila, mas ele só executa quando o
+                serviço voltar. Reinicie na hospedagem{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''} e veja os registros: a causa costuma estar na última linha.
+              </div>
+            )}
+
+            {diretoFalhou && (
+              <div className="p-alert p-alert-warn" style={{ marginBottom: 12 }}>
+                <strong>O serviço está vivo, mas o endereço direto não responde.</strong> Os botões funcionam pela fila, com alguns
+                segundos de atraso. Para ficar imediato, confira no Railway se o domínio em <code>WHATSAPP_PONTE_URL</code> foi gerado
+                para este serviço e para a porta em que ele escuta.
               </div>
             )}
 
@@ -266,24 +309,41 @@ export default function WhatsappPainel(p: Props) {
               </p>
             )}
 
+            {situacao === 'desconectado' && servicoVivo && !mostrarQr && (
+              <p className="p-muted" style={{ marginBottom: 12 }}>
+                Sem sessão com o WhatsApp. Clique em <strong>Parear de novo</strong> para gerar o código QR.
+              </p>
+            )}
+
             <div className="p-row" style={{ gap: 8, marginBottom: 12 }}>
               <button type="button" className="p-btn p-btn-sm" disabled={ocupado} onClick={() => comandar('pulso')}>
-                {executando === 'pulso' ? 'Verificando...' : 'Verificar agora'}
+                {executando === 'pulso' ? 'Enviando...' : 'Verificar agora'}
               </button>
               <button type="button" className="p-btn p-btn-sm p-btn-navy" disabled={ocupado} onClick={() => comandar('reconectar')}>
-                {executando === 'reconectar' ? 'Pedindo...' : 'Reconectar'}
+                {executando === 'reconectar' ? 'Enviando...' : 'Reconectar'}
               </button>
-              <button type="button" className="p-btn p-btn-sm" disabled={ocupado} onClick={() => comandar('parear_novamente')}>
-                {executando === 'parear_novamente' ? 'Pedindo...' : 'Parear de novo (novo QR)'}
+              <button type="button" className="p-btn p-btn-sm p-btn-primary" disabled={ocupado} onClick={() => comandar('parear_novamente')}>
+                {executando === 'parear_novamente' ? 'Enviando...' : 'Parear de novo (novo QR)'}
               </button>
               {!p.diretoConfigurado && (
                 <span className="p-small p-muted">
-                  Comandos vão pela fila (até 5 s). Para resposta imediata e saúde em tempo real, configure <code>WHATSAPP_PONTE_URL</code>.
+                  Comandos vão pela fila. Para resposta imediata, configure <code>WHATSAPP_PONTE_URL</code>.
                 </span>
               )}
             </div>
 
-            {aviso && <div className="p-alert p-alert-info" style={{ marginBottom: 12 }}>{aviso}</div>}
+            {avisoVisivel && (
+              <div className="p-alert p-alert-info" style={{ marginBottom: 12 }}>
+                {avisoVisivel}
+                {pedidoAtivo && (
+                  <span className="p-small" style={{ display: 'block', marginTop: 4, opacity: 0.8 }}>
+                    {segundosDesdePedido < RAJADA_MS / 1000
+                      ? `Atualizando a cada segundo (${segundosDesdePedido} s). Um QR novo costuma levar de 5 a 15 segundos para aparecer.`
+                      : 'Sem resposta no tempo esperado. Se o serviço estiver vivo, tente de novo; se não, reinicie na hospedagem.'}
+                  </span>
+                )}
+              </div>
+            )}
 
             <ul className="p-checks">
               {verificacoes.map((v) => (
