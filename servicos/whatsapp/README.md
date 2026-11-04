@@ -25,8 +25,20 @@ aparece em `/painel/whatsapp`, não no terminal.
 | `PAINEL_WHATSAPP_TOKEN` | sim | | Mesmo valor configurado na Vercel |
 | `PORTA` | não | 8080 | Porta do endereço de saúde |
 | `INTERVALO_ENVIO_MS` | não | 3000 | Agrupamento antes de enviar ao painel |
+| `INTERVALO_PULSO_MS` | não | 30000 | Sinal de vida ao painel, com diagnóstico |
+| `INTERVALO_COMANDO_MS` | não | 5000 | Consulta da fila de comandos no painel |
 | `JANELA_DIAS` | não | 7 | Quantos dias para trás aceitar ao conectar |
 | `LOG_LEVEL` | não | warn | Nível de registro da biblioteca |
+
+## Endereços HTTP
+
+| Rota | Autenticação | Para quê |
+| --- | --- | --- |
+| `GET /saude` (ou `/`) | nenhuma | status, versão, fila e contadores; sempre 200 |
+| `POST /comando` | `Authorization: Bearer <token>` | `{ "comando": "pulso" \| "reconectar" \| "parear_novamente" }` |
+
+Com o domínio público do serviço em `WHATSAPP_PONTE_URL` na Vercel, o painel
+usa esses endereços direto. Sem ele, o serviço consulta a fila do painel.
 
 ## Por que fica fora da Vercel
 
