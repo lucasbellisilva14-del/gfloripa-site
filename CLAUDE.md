@@ -52,8 +52,14 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
   da Vercel porque precisa de socket aberto). Repassa mensagens ao painel por
   token (PAINEL_WHATSAPP_TOKEN). Nunca envia mensagem: é o que mais provoca
   bloqueio de número. Ver docs/painel/whatsapp.md.
-- Testes: npm test (validador da análise), node scripts/qa-painel.mjs (telas,
-  Playwright) e node scripts/qa-whatsapp.mjs (ponte), com o servidor no ar.
+- A tela do WhatsApp comanda o serviço (reconectar, parear de novo, pulso):
+  direto se WHATSAPP_PONTE_URL estiver na Vercel, senão por fila que o serviço
+  consulta a cada 5 s. O serviço manda pulso a cada 30 s com diagnóstico e
+  versão; a tela acusa quando ele some. No deploy, a instância substituída
+  encerra em vez de reconectar (duas disputariam a sessão).
+- Testes: npm test (validador, filtros e situação), node scripts/qa-painel.mjs
+  (telas, Playwright), node scripts/qa-whatsapp.mjs (rotas da ponte) e
+  node scripts/qa-ponte.mjs (o serviço real contra o painel), servidor no ar.
 
 ## Variáveis de ambiente (.env.local, NUNCA commitar)
 

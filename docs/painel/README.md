@@ -122,6 +122,8 @@ Environment Variables (variável nova exige Redeploy).
 | `PAINEL_DEMO` | não | `1` libera a senha `demo` mesmo em produção (só para preview). |
 | `PAINEL_JETIMOB_ENVIO` | não | `1` ativa o botão "Enviar para o Jetimob" (usa `JETIMOB_PUBLIC_KEY`/`JETIMOB_PRIVATE_KEY`). |
 | `PAINEL_WHATSAPP_TOKEN` | não | Token compartilhado com o serviço `servicos/whatsapp`. Sem ele a ponte do WhatsApp fica desligada. Ver `whatsapp.md`. |
+| `WHATSAPP_PONTE_URL` | não | Domínio público do serviço na hospedagem. Com ele, os botões da tela do WhatsApp agem na hora e a saúde é em tempo real. |
+| `WHATSAPP_HOSPEDAGEM_URL` | não | Link do painel da hospedagem (Railway), mostrado como atalho quando o serviço cai. |
 
 Custo estimado por análise com Sonnet 5.5: uma conversa de WhatsApp típica
 (3 a 6 mil tokens de entrada com o padrão de atendimento, 2 a 3 mil de saída)

@@ -201,12 +201,33 @@ export const ROTULO_STATUS_WHATSAPP: Record<StatusWhatsapp, string> = {
   conectado: 'Conectado',
 }
 
+// Comandos que a tela pode pedir ao serviço. O serviço consome e limpa.
+export type ComandoWhatsapp = 'reconectar' | 'parear_novamente' | 'pulso'
+export const COMANDOS_WHATSAPP: ComandoWhatsapp[] = ['reconectar', 'parear_novamente', 'pulso']
+
+// O que o serviço informa a cada sinal de vida. Serve para a tela dizer se
+// ele está vendo mensagens, se consegue entregá-las e qual versão está rodando.
+export type DiagnosticoWhatsapp = {
+  versao: string | null // commit em execução na hospedagem
+  desde: string | null // quando o processo subiu
+  vistas: number // mensagens que a biblioteca entregou ao serviço
+  aceitas: number // passaram nos filtros (pessoa, texto, janela)
+  enviadas: number // entregues ao painel com sucesso
+  falhas_envio: number
+  ultima_vista_em: string | null
+  ultimo_erro: string | null
+  painel_url: string | null
+}
+
 export type EstadoWhatsapp = {
   corretor_id: number
   status: StatusWhatsapp
   qr: string | null
   numero: string | null
   detalhe: string | null
+  comando: ComandoWhatsapp | null
+  comando_em: string | null
+  diagnostico: DiagnosticoWhatsapp | null
   atualizado_em: string
 }
 
@@ -221,6 +242,8 @@ export type ChatWhatsapp = {
   ultima_mensagem_em: string | null
   ultimo_texto: string | null
   arquivado: boolean
+  analisado_em: string | null
+  mensagens_analisadas: number
   criado_em: string
 }
 

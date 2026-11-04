@@ -4,7 +4,7 @@
 
 import type { PainelDb, PatchEstadoWhatsapp } from './db'
 import { normalizarTelefone, ordenarClientes } from './db'
-import type { Analise, ChatWhatsapp, Cliente, Conversa, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemRecebida, MensagemWhatsapp } from './tipos'
+import type { Analise, ChatWhatsapp, Cliente, ComandoWhatsapp, Conversa, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemRecebida, MensagemWhatsapp } from './tipos'
 
 type Linha = Record<string, unknown>
 
@@ -204,6 +204,10 @@ export function criarDbSupabase(): PainelDb {
         qr: patch.qr !== undefined ? patch.qr : (atual?.qr ?? null),
         numero: patch.numero !== undefined ? patch.numero : (atual?.numero ?? null),
         detalhe: patch.detalhe !== undefined ? patch.detalhe : (atual?.detalhe ?? null),
+        diagnostico: patch.diagnostico !== undefined ? patch.diagnostico : (atual?.diagnostico ?? null),
+        // comando não entra no upsert do estado: tem rotas próprias
+        comando: atual?.comando ?? null,
+        comando_em: atual?.comando_em ?? null,
         atualizado_em: new Date().toISOString(),
       }
       const linhas = await rest<EstadoWhatsapp[]>('whatsapp_estado', {
@@ -314,6 +318,30 @@ export function criarDbSupabase(): PainelDb {
         body: JSON.stringify(patch),
       })
       return linhas[0] ?? null
+    },
+    async definirComandoWhatsapp(corretorId, comando) {
+      await this.salvarEstadoWhatsapp(corretorId, {}) // garante a linha
+      await rest('whatsapp_estado', {
+        method: 'PATCH',
+        query: `corretor_id=eq.${q(corretorId)}`,
+        retorno: false,
+        body: JSON.stringify({ comando, comando_em: comando ? new Date().toISOString() : null }),
+      })
+    },
+    async consumirComandoWhatsapp(corretorId) {
+      // lê e limpa na mesma operação: só limpa se ainda for o mesmo comando,
+      // então duas instâncias do serviço não executam o mesmo pedido
+      const linhas = await rest<{ comando: ComandoWhatsapp | null }[]>('whatsapp_estado', {
+        query: `select=comando&corretor_id=eq.${q(corretorId)}&limit=1`,
+      })
+      const comando = linhas[0]?.comando ?? null
+      if (!comando) return null
+      const limpas = await rest<{ corretor_id: number }[]>('whatsapp_estado', {
+        method: 'PATCH',
+        query: `corretor_id=eq.${q(corretorId)}&comando=eq.${q(comando)}`,
+        body: JSON.stringify({ comando: null, comando_em: null }),
+      })
+      return limpas.length ? comando : null
     },
   }
 }

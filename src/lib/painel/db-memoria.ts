@@ -209,7 +209,17 @@ export async function criarDbMemoria(): Promise<PainelDb> {
       estado.whatsapp_estado = estado.whatsapp_estado ?? []
       let atual = estado.whatsapp_estado.find((e) => e.corretor_id === corretorId)
       if (!atual) {
-        atual = { corretor_id: corretorId, status: 'desconectado', qr: null, numero: null, detalhe: null, atualizado_em: agoraIso() }
+        atual = {
+          corretor_id: corretorId,
+          status: 'desconectado',
+          qr: null,
+          numero: null,
+          detalhe: null,
+          comando: null,
+          comando_em: null,
+          diagnostico: null,
+          atualizado_em: agoraIso(),
+        }
         estado.whatsapp_estado.push(atual)
       }
       Object.assign(atual, patch, { atualizado_em: agoraIso() })
@@ -246,6 +256,8 @@ export async function criarDbMemoria(): Promise<PainelDb> {
             ultima_mensagem_em: null,
             ultimo_texto: null,
             arquivado: false,
+            analisado_em: null,
+            mensagens_analisadas: 0,
             criado_em: agoraIso(),
           }
           estado.whatsapp_chats.push(chat)
@@ -291,6 +303,21 @@ export async function criarDbMemoria(): Promise<PainelDb> {
       const c = (estado.whatsapp_chats ?? []).find((x) => x.id === id)
       if (!c) return null
       Object.assign(c, patch)
+      await persistir()
+      return c
+    },
+    async definirComandoWhatsapp(corretorId, comando) {
+      const e = await this.salvarEstadoWhatsapp(corretorId, {})
+      e.comando = comando
+      e.comando_em = comando ? agoraIso() : null
+      await persistir()
+    },
+    async consumirComandoWhatsapp(corretorId) {
+      const e = (estado.whatsapp_estado ?? []).find((x) => x.corretor_id === corretorId)
+      if (!e?.comando) return null
+      const c = e.comando
+      e.comando = null
+      e.comando_em = null
       await persistir()
       return c
     },
