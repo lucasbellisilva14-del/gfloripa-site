@@ -3,6 +3,9 @@
 Serviço que mantém a conexão do WhatsApp e repassa as mensagens ao Painel do
 Corretor. **Somente leitura: nunca envia mensagem.**
 
+Além das mensagens, repassa os nomes da agenda do celular (rota `contatos`)
+para batizar as conversas pelo nome da outra pessoa, nunca pelo do corretor.
+
 Documentação completa, com instalação no Railway e os riscos envolvidos:
 [`docs/painel/whatsapp.md`](../../docs/painel/whatsapp.md).
 

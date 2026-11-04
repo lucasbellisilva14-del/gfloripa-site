@@ -39,7 +39,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys'
 import pino from 'pino'
 import QRCode from 'qrcode'
-import { JANELA_DIAS_PADRAO, prepararMensagem, tipoAceito } from './filtros.mjs'
+import { JANELA_DIAS_PADRAO, ehConversaDePessoa, prepararMensagem, tipoAceito } from './filtros.mjs'
 
 const PAINEL_URL = (process.env.PAINEL_URL ?? '').replace(/\/$/, '')
 const TOKEN = process.env.PAINEL_WHATSAPP_TOKEN ?? ''
@@ -207,6 +207,46 @@ function montarAuth(salvo) {
   }
 }
 
+// --- agenda de contatos ----------------------------------------------------
+// A biblioteca avisa nomes de contatos (agenda do celular e nome público) em
+// eventos próprios. Guardamos em memória para batizar as conversas pelo nome
+// da outra pessoa, e repassamos ao painel para corrigir conversas antigas.
+
+const nomesContatos = new Map() // jid -> nome
+let meuNome = null
+const contatosPendentes = new Map()
+let envioContatosAgendado = null
+
+function registrarContatos(lista) {
+  for (const c of lista ?? []) {
+    const jid = c?.id
+    if (!ehConversaDePessoa(jid)) continue
+    const nome = (c.name ?? c.notify ?? c.verifiedName ?? '').trim()
+    if (!nome) continue
+    if (nomesContatos.get(jid) === nome) continue
+    nomesContatos.set(jid, nome)
+    contatosPendentes.set(jid, nome)
+  }
+  if (contatosPendentes.size && !envioContatosAgendado) {
+    envioContatosAgendado = setTimeout(enviarContatos, 4000)
+  }
+}
+
+async function enviarContatos() {
+  envioContatosAgendado = null
+  if (!contatosPendentes.size) return
+  const lote = [...contatosPendentes.entries()].slice(0, 300).map(([wa_chat_id, nome]) => ({ wa_chat_id, nome }))
+  try {
+    const r = await painel('contatos', { method: 'POST', body: JSON.stringify({ contatos: lote, meu_nome: meuNome }) })
+    for (const c of lote) contatosPendentes.delete(c.wa_chat_id)
+    if (r?.renomeadas) diga(`${r.renomeadas} conversa(s) renomeada(s) pela agenda`)
+    if (contatosPendentes.size) envioContatosAgendado = setTimeout(enviarContatos, 2000)
+  } catch (err) {
+    registrarErro(`contatos: ${err.message}`)
+    envioContatosAgendado = setTimeout(enviarContatos, 30000)
+  }
+}
+
 // --- fila de mensagens -----------------------------------------------------
 
 const fila = []
@@ -217,7 +257,7 @@ async function escoarFila() {
   enviando = true
   const lote = fila.splice(0, 200)
   try {
-    const r = await painel('entrada', { method: 'POST', body: JSON.stringify({ mensagens: lote }) })
+    const r = await painel('entrada', { method: 'POST', body: JSON.stringify({ mensagens: lote, meu_nome: meuNome }) })
     diag.enviadas += lote.length
     if (r?.novas) diga(`${r.novas} mensagem(ns) nova(s) gravada(s) no painel`)
     else diga(`${lote.length} mensagem(ns) enviada(s), nenhuma nova (já estavam no painel)`)
@@ -295,6 +335,7 @@ async function conectar() {
     }
 
     if (connection === 'open') {
+      meuNome = (s.user?.name ?? '').trim() || meuNome
       const numero = (s.user?.id ?? '').split(':')[0].split('@')[0]
       diga(`conectado como ${numero} | versão ${VERSAO} | janela de ${JANELA_DIAS} dia(s) | painel: ${PAINEL_URL}`)
       await publicarEstado({ status: 'conectado', qr: null, numero, detalhe: null })
@@ -330,6 +371,16 @@ async function conectar() {
     }
   })
 
+  s.ev.on('contacts.upsert', (lista) => {
+    if (socket === s) registrarContatos(lista)
+  })
+  s.ev.on('contacts.update', (lista) => {
+    if (socket === s) registrarContatos(lista)
+  })
+  s.ev.on('messaging-history.set', ({ contacts }) => {
+    if (socket === s) registrarContatos(contacts)
+  })
+
   s.ev.on('messages.upsert', ({ messages, type }) => {
     if (socket !== s) return
     diag.vistas += messages.length
@@ -338,7 +389,7 @@ async function conectar() {
     let aceitas = 0
     const recusas = {}
     for (const m of messages) {
-      const r = prepararMensagem(m, { janelaDias: JANELA_DIAS })
+      const r = prepararMensagem(m, { janelaDias: JANELA_DIAS, nomeContato: nomesContatos.get(m?.key?.remoteJid) ?? null })
       if (r.recusa) {
         recusas[r.recusa] = (recusas[r.recusa] ?? 0) + 1
         continue

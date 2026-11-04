@@ -217,6 +217,20 @@ export default function WhatsappPainel(p: Props) {
     setAviso(`${alvo.length} conversa(s) analisada(s). As fichas dos clientes estão atualizadas.`)
   }
 
+  async function renomear(chat: ChatWhatsapp) {
+    const atual = chat.nome ?? ''
+    const nome = window.prompt('Nome desta conversa (nome do contato):', atual)
+    if (nome === null) return
+    const limpo = nome.trim()
+    if (!limpo || limpo === atual) return
+    await fetch('/api/painel/whatsapp/chat', {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ chat_id: chat.id, nome: limpo }),
+    })
+    await atualizar()
+  }
+
   async function arquivar(chat: ChatWhatsapp) {
     await fetch('/api/painel/whatsapp/chat', {
       method: 'PATCH',
@@ -432,6 +446,7 @@ export default function WhatsappPainel(p: Props) {
                         {analisando === c.id ? 'Analisando...' : novas > 0 && c.analisado_em ? 'Reanalisar' : 'Analisar'}
                       </button>
                       {c.cliente_id && <Link href={`/painel/clientes/${c.cliente_id}`} className="p-btn p-btn-sm">Ficha</Link>}
+                      <button type="button" className="p-btn p-btn-sm p-btn-ghost" title="Corrigir o nome desta conversa" onClick={() => renomear(c)}>Renomear</button>
                       <button type="button" className="p-btn p-btn-sm p-btn-ghost" onClick={() => arquivar(c)}>Arquivar</button>
                     </div>
                   </div>

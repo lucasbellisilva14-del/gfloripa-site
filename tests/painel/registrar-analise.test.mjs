@@ -23,7 +23,7 @@ before(async () => {
 test('mesma pessoa, duas análises: um cliente só, duas conversas, duas análises', async () => {
   const telefone = `48 9${sufixo()}`
   const r1 = await analisarERegistrar({ corretor, texto, dataConversa: '2026-11-04', clienteNome: 'Charles', clienteTelefone: telefone, origem: 'colado' })
-  const r2 = await analisarERegistrar({ corretor, texto: 'E aí, conseguiu ver o valor?', dataConversa: '2026-11-05', clienteTelefone: `(48) 9${telefone.split('9')[1]}`, origem: 'WhatsApp' })
+  const r2 = await analisarERegistrar({ corretor, texto: 'E aí, conseguiu ver o valor?', dataConversa: '2026-11-05', clienteTelefone: `(48) ${telefone.slice(3)}`, origem: 'WhatsApp' })
   assert.equal(r1.cliente.id, r2.cliente.id, 'telefone em formato diferente ainda casa')
   assert.equal(r1.comHistorico, false, 'primeira análise não tem histórico')
   assert.equal(r2.comHistorico, true, 'segunda análise recebe o histórico')

@@ -61,7 +61,17 @@ export function textoDaMensagem(m) {
 
 // Converte a mensagem crua no formato que o painel espera, ou devolve o
 // motivo da recusa, para a ponte poder registrar por que ignorou algo.
-export function prepararMensagem(m, { janelaDias = JANELA_DIAS_PADRAO, agora = Date.now() } = {}) {
+// Nome da conversa: a agenda do contato vale acima de tudo; sem ela, o
+// pushName só serve quando a mensagem é da outra pessoa. Em mensagem enviada
+// por mim, pushName é o MEU nome, e usá-lo batizava a conversa com o nome do
+// corretor.
+export function nomeDaConversa(m, nomeContato) {
+  if (nomeContato) return nomeContato
+  if (m?.key?.fromMe) return null
+  return m?.pushName ?? null
+}
+
+export function prepararMensagem(m, { janelaDias = JANELA_DIAS_PADRAO, agora = Date.now(), nomeContato = null } = {}) {
   const jid = m?.key?.remoteJid
   if (!ehConversaDePessoa(jid)) return { recusa: 'nao e conversa de pessoa' }
   const texto = textoDaMensagem(m)
@@ -74,7 +84,7 @@ export function prepararMensagem(m, { janelaDias = JANELA_DIAS_PADRAO, agora = D
       wa_chat_id: jid,
       wa_id: m.key.id,
       direcao: m.key.fromMe ? 'saida' : 'entrada',
-      nome: m.pushName ?? null,
+      nome: nomeDaConversa(m, nomeContato),
       autor: m.key.fromMe ? null : (m.pushName ?? null),
       texto,
       data: new Date(ms ?? agora).toISOString(),
