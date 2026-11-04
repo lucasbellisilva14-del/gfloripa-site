@@ -230,6 +230,16 @@ uma vez por deploy.
 
 ## Problemas comuns
 
+**A tela diz que o serviço está numa versão antiga.** O serviço responde,
+mas sem número de versão e sem diagnóstico: a hospedagem está servindo um
+build anterior aos últimos deploys, e versões antigas descartam as mensagens
+que você envia do celular. No Railway, aba Deployments: a última implantação
+bem-sucedida tem que ser do dia do último merge. Se houver implantações com
+falha, o registro do build diz por quê. Use Redeploy. Em Settings, confira
+Source: branch `main` e Root Directory `servicos/whatsapp`. Para conferir à
+mão, abra `https://<dominio-do-servico>/saude` no navegador: o serviço atual
+devolve um campo `versao` com o commit em execução.
+
 **O código QR não aparece.** O serviço não está no ar, ou `PAINEL_URL` e
 `PAINEL_WHATSAPP_TOKEN` não batem entre o Railway e a Vercel. Veja os
 registros no Railway: a ponte imprime o motivo.

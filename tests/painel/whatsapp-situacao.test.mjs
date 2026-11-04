@@ -158,6 +158,37 @@ test('sem relógio (primeira renderização): confia no status e não acusa nada
   assert.equal(r.servicoVivo, null)
 })
 
+test('O CASO DO RAILWAY: direto responde sem versao, pulso sem diagnostico = build antigo', () => {
+  const diretoAntigo = { alcancavel: true, conectado: true, numero: '554891363621', fila: 0, desde: null, versao: null, erro: null }
+  const r = situacaoWhatsapp({ ...base, saude: diretoAntigo, estado: estado({ diagnostico: null }) })
+  assert.equal(r.servicoVivo, true)
+  assert.equal(r.situacao, 'conectado', 'continua pareado; o problema é o build')
+  assert.equal(r.desatualizado, true)
+  assert.equal(check(r, 'servico').ok, false)
+  assert.match(check(r, 'servico').detalhe, /versão antiga/)
+  assert.match(check(r, 'servico').detalhe, /Redeploy/)
+})
+
+test('sem endereco direto, pulso recente sem diagnostico tambem denuncia build antigo', () => {
+  const r = situacaoWhatsapp({ ...base, estado: estado({ diagnostico: null }) })
+  assert.equal(r.desatualizado, true)
+  assert.equal(check(r, 'servico').ok, false)
+})
+
+test('versao presente em qualquer fonte: nao e build antigo', () => {
+  const r1 = situacaoWhatsapp({ ...base, saude: vivoConectado, estado: estado({ diagnostico: null }) })
+  assert.equal(r1.desatualizado, false, 'direto com versao basta')
+  const r2 = situacaoWhatsapp({ ...base, estado: estado() })
+  assert.equal(r2.desatualizado, false, 'pulso com diagnostico basta')
+  assert.match(check(r2, 'servico').detalhe, /versão abc1234/)
+})
+
+test('servico morto nao e classificado como build antigo', () => {
+  const r = situacaoWhatsapp({ ...base, estado: estado({ diagnostico: null, atualizado_em: iso(LIMITE_SEM_PULSO_MS + 1000) }) })
+  assert.equal(r.desatualizado, false)
+  assert.equal(r.situacao, 'sem_noticias')
+})
+
 test('nunca houve notícia: desconectado, sem acusar pulso perdido', () => {
   const r = situacaoWhatsapp({ ...base, estado: null })
   assert.equal(r.situacao, 'desconectado')

@@ -93,7 +93,8 @@ try {
     headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` },
     body: JSON.stringify({ comando: 'pulso' }),
   })
-  ok(r.ok, 'comando direto "pulso" aceito')
+  const confirmacao = await r.json().catch(() => ({}))
+  ok(r.ok && confirmacao.ok === true && confirmacao.comando === 'pulso', 'comando direto "pulso" aceito e confirmado ({ ok, comando })')
   r = await fetch(`http://localhost:${PORTA}/comando`, {
     method: 'POST',
     headers: { 'content-type': 'application/json', authorization: `Bearer ${TOKEN}` },
