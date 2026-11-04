@@ -86,6 +86,7 @@ export function criarDbSupabase(): PainelDb {
           telefone_normalizado: normalizarTelefone(input.telefone),
           email: input.email ?? null,
           tipo: input.tipo ?? 'indefinido',
+          tipo_origem: input.tipo_origem ?? 'ia',
           origem: input.origem ?? null,
         }),
       })

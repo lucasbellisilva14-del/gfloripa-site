@@ -36,13 +36,24 @@ export type NovoCliente = {
   telefone?: string | null
   email?: string | null
   tipo?: TipoCliente
+  tipo_origem?: 'ia' | 'manual'
   origem?: string | null
 }
 
 export type PatchCliente = Partial<
   Pick<
     Cliente,
-    'nome' | 'telefone' | 'email' | 'tipo' | 'origem' | 'temperatura' | 'nota_temperatura' | 'estagio' | 'resumo' | 'ultima_interacao'
+    | 'nome'
+    | 'telefone'
+    | 'email'
+    | 'tipo'
+    | 'tipo_origem'
+    | 'origem'
+    | 'temperatura'
+    | 'nota_temperatura'
+    | 'estagio'
+    | 'resumo'
+    | 'ultima_interacao'
   >
 >
 

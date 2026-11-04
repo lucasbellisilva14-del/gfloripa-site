@@ -111,6 +111,17 @@ test('transcricao: null quando a conversa veio como texto, string quando veio de
   assert.equal(validarAnalise(vazia).analise.transcricao, null)
 })
 
+test('tipo_cliente: obrigatório no esquema, validado, cai em indefinido com aviso', () => {
+  assert.ok(ANALISE_JSON_SCHEMA.required.includes('tipo_cliente'))
+  assert.deepEqual(ANALISE_JSON_SCHEMA.properties.tipo_cliente.enum, ['comprador', 'locatario', 'proprietario', 'indefinido'])
+  assert.equal(validarAnalise(ANALISE_DEMO).analise.tipo_cliente, 'comprador')
+  const bruto = structuredClone(ANALISE_DEMO)
+  bruto.tipo_cliente = 'investidor'
+  const { analise, avisos } = validarAnalise(bruto)
+  assert.equal(analise.tipo_cliente, 'indefinido')
+  assert.ok(avisos.some((a) => a.includes('tipo_cliente')))
+})
+
 test('o esquema exige transcricao e aceita nulo', () => {
   assert.ok(ANALISE_JSON_SCHEMA.required.includes('transcricao'))
   assert.ok(ANALISE_JSON_SCHEMA.properties.transcricao.anyOf.some((o) => o.type === 'null'))

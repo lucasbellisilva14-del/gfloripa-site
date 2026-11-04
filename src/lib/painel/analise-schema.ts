@@ -8,6 +8,9 @@
 
 import type { AnaliseResultado, Confianca, Estagio, Temperatura, TipoInsight } from './tipos'
 import { ESTAGIOS, TEMPERATURAS } from './tipos'
+import type { TipoCliente } from './tipos'
+
+const TIPOS_CLIENTE: TipoCliente[] = ['comprador', 'locatario', 'proprietario', 'indefinido']
 
 const TIPOS_INSIGHT: TipoInsight[] = ['urgencia', 'hesitacao', 'concorrencia', 'decisor_ausente', 'risco_perda', 'oportunidade', 'outro']
 const CONFIANCAS: Confianca[] = ['alta', 'media', 'baixa']
@@ -25,6 +28,7 @@ export const ANALISE_JSON_SCHEMA = {
   required: [
     'transcricao',
     'resumo',
+    'tipo_cliente',
     'temperatura',
     'estagio',
     'fatos',
@@ -43,6 +47,12 @@ export const ANALISE_JSON_SCHEMA = {
         'Quando a conversa vier como imagem (print), transcreva aqui o diálogo lido, uma mensagem por linha, no formato "[data hora] Quem: texto" quando visível. Quando a conversa vier como texto, devolva null.',
     },
     resumo: { ...str, description: 'Resumo executivo da conversa em 3 a 5 linhas, em português.' },
+    tipo_cliente: {
+      type: 'string',
+      enum: ['comprador', 'locatario', 'proprietario', 'indefinido'],
+      description:
+        'Papel do cliente pelo que ele quer fazer, considerando o histórico: comprador (quer comprar), locatario (quer alugar, temporada ou anual), proprietario (quer vender ou alugar imóvel dele). Use indefinido só se a conversa não permitir saber.',
+    },
     temperatura: {
       type: 'object',
       additionalProperties: false,
@@ -312,6 +322,7 @@ export function validarAnalise(bruto: unknown): { analise: AnaliseResultado; avi
     analise: {
       transcricao: textoOuNulo(bruto.transcricao),
       resumo,
+      tipo_cliente: enumValor<TipoCliente>(bruto.tipo_cliente, TIPOS_CLIENTE, 'tipo_cliente', avisos, 'indefinido'),
       temperatura: { nivel, nota: notaTemp, justificativa: texto(temp.justificativa, 'temperatura.justificativa', avisos, false) },
       estagio,
       fatos,

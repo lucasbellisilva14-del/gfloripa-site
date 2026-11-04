@@ -39,8 +39,20 @@ export function estimarCustoUsd(modelo: string, tokensEntrada: number, tokensSai
   return (tokensEntrada * preco.entrada + tokensSaida * preco.saida) / 1_000_000
 }
 
+// O que o painel já sabe do cliente, de conversas e análises anteriores.
+export type HistoricoCliente = {
+  tipoRegistrado: TipoCliente
+  tipoFixadoManualmente: boolean
+  avaliacaoAnterior: string | null // ex.: "Quente (72/100), estágio visita agendada, em 2026-11-04"
+  resumoAnterior: string | null
+  fatosAnteriores: string[]
+  conversasAnteriores: string[] // mais recentes primeiro, já limitadas em tamanho
+  totalAnalises: number
+}
+
 export type EntradaAnalise = {
   conversa: string
+  historico?: HistoricoCliente | null
   // prints da conversa, lidos pela visão do modelo; podem vir sozinhos
   imagens?: ImagemEnviada[]
   dataConversa: string // AAAA-MM-DD
@@ -72,7 +84,16 @@ Regras gerais:
 - Texto para o Jetimob: siga a ordem da seção "Padrão de registro no Jetimob" do padrão de atendimento, em um único parágrafo objetivo.
 - Qualidade do atendimento: avalie o CORRETOR (não o cliente) contra as perguntas de qualificação obrigatórias e as regras do padrão. Seja direto sobre o que faltou perguntar.
 - Insights: aponte sinais que uma pessoa ocupada deixaria passar (urgência, hesitação, concorrência, decisor ausente, risco de perda, oportunidade). Cada insight em uma frase ou duas, com o que fazer a respeito.
+- Tipo de cliente (campo tipo_cliente): classifique pelo que a pessoa quer fazer, não por palavras soltas. Quem pergunta preço de venda, financiamento, entrada ou quer visitar para comprar é comprador, mesmo que a palavra "alugar" apareça em outro contexto. Quem procura casa para temporada ou aluguel anual é locatário. Quem quer vender ou alugar um imóvel dele é proprietário. Use indefinido só se a conversa não permitir saber.
 - Nunca use travessão (—) ou meia-risca (–) em nenhum texto. Escreva tudo em português do Brasil.
+
+QUANDO HOUVER UM BLOCO "HISTÓRICO JÁ CONHECIDO DESTE CLIENTE":
+- Ele traz o que o painel já sabe de conversas anteriores. A conversa nova pode ser continuação, pode repetir mensagens já vistas, ou ser só um trecho curto.
+- Avalie o cliente como um todo: temperatura, estágio, tipo e fatos devem refletir tudo que se sabe, não apenas o trecho novo. Um trecho curto ou uma mensagem solta não rebaixam a temperatura por si só; só rebaixe se houver sinal real de esfriamento (desinteresse, prazo perdido, silêncio prolongado, desistência).
+- Se o trecho novo contradisser o histórico (desistência, mudança de orçamento, outro imóvel), prevaleça o mais recente e diga isso na justificativa da temperatura.
+- Se o histórico disser que o tipo foi fixado manualmente pelo corretor, mantenha esse tipo.
+- Em lembretes, inclua só compromissos novos ou ainda pendentes; não recrie os já cumpridos.
+- No resumo, integre: o que já se sabia mais o que mudou agora.
 
 QUANDO A CONVERSA VIER COMO IMAGEM (prints de tela):
 - Leia os prints na ordem em que aparecem; costumam ser partes seguidas da mesma conversa, e pode haver repetição de mensagens entre um e outro.
@@ -111,9 +132,28 @@ function montarMensagemUsuario(e: EntradaAnalise): string {
     `CLIENTE INFORMADO PELO CORRETOR: ${e.clienteNome?.trim() || 'não informado'}`,
     `TELEFONE INFORMADO: ${e.clienteTelefone?.trim() || 'não informado'}`,
     `CÓDIGO DO IMÓVEL INFORMADO: ${e.codigoImovel?.trim() || 'não informado'}`,
-    `TIPO DE CLIENTE INFORMADO: ${e.tipoCliente && e.tipoCliente !== 'indefinido' ? ROTULO_TIPO_CLIENTE[e.tipoCliente] : 'não informado (deduza pela conversa)'}`,
+    `TIPO DE CLIENTE INFORMADO: ${e.tipoCliente && e.tipoCliente !== 'indefinido' ? ROTULO_TIPO_CLIENTE[e.tipoCliente] : 'não informado (deduza pela conversa e pelo histórico)'}`,
     '',
   ]
+  const h = e.historico
+  if (h) {
+    linhas.push(
+      `HISTÓRICO JÁ CONHECIDO DESTE CLIENTE (${h.totalAnalises} análise(s) anterior(es) no painel):`,
+      `- Tipo registrado: ${ROTULO_TIPO_CLIENTE[h.tipoRegistrado]}${h.tipoFixadoManualmente ? ' (fixado manualmente pelo corretor; mantenha)' : ' (deduzido pela I.A.; pode revisar)'}`,
+      `- Última avaliação: ${h.avaliacaoAnterior ?? 'nenhuma'}`,
+      `- Resumo anterior: ${h.resumoAnterior ?? 'nenhum'}`
+    )
+    if (h.fatosAnteriores.length) linhas.push('- Fatos já levantados:', ...h.fatosAnteriores.map((f) => `  · ${f}`))
+    if (h.conversasAnteriores.length) {
+      linhas.push(
+        `- Conversas anteriores (${h.conversasAnteriores.length}, mais recentes primeiro; podem se sobrepor à conversa nova):`,
+        '"""',
+        h.conversasAnteriores.join('\n\n'),
+        '"""'
+      )
+    }
+    linhas.push('')
+  }
   if (imagens.length) {
     linhas.push(
       `CONVERSA: ${imagens.length === 1 ? 'o print acima' : `os ${imagens.length} prints acima, em ordem`}.`,
@@ -122,7 +162,7 @@ function montarMensagemUsuario(e: EntradaAnalise): string {
   }
   if (e.conversa.trim()) {
     linhas.push(
-      imagens.length ? 'TEXTO ADICIONAL ENVIADO PELO CORRETOR:' : 'CONVERSA:',
+      imagens.length ? 'TEXTO ADICIONAL ENVIADO PELO CORRETOR:' : h ? 'CONVERSA NOVA (a avaliar junto com o histórico):' : 'CONVERSA:',
       '"""',
       e.conversa.trim(),
       '"""'
@@ -136,6 +176,7 @@ export function analiseDemo(e: EntradaAnalise): SaidaAnalise {
   const resultado: AnaliseResultado = JSON.parse(JSON.stringify(ANALISE_DEMO))
   if (e.clienteNome?.trim()) resultado.fatos.contato.nome = e.clienteNome.trim()
   if (e.clienteTelefone?.trim()) resultado.fatos.contato.telefone = e.clienteTelefone.trim()
+  if (e.tipoCliente && e.tipoCliente !== 'indefinido') resultado.tipo_cliente = e.tipoCliente
   return { resultado, modelo: 'demo', tokensEntrada: 0, tokensSaida: 0, custoUsd: 0, demo: true, avisos: [] }
 }
 

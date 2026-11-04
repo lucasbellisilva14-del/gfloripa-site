@@ -22,7 +22,7 @@ Funciona em três situações, sem quebrar o site público em nenhuma delas:
 | `/painel` | Dashboard: leads por temperatura, lembretes de hoje e atrasados, análises na semana, clientes ordenados por temperatura, últimas análises. | `capturas/02-dashboard.png`, `08-dashboard-escuro.png` |
 | `/painel/whatsapp` | Ponte com o WhatsApp: código QR, status da conexão e conversas capturadas, com botão para analisar cada uma. Somente leitura, nunca envia. Ver `whatsapp.md`. | `capturas/10-whatsapp.png`, `11-whatsapp-analise.png` |
 | `/painel/analisar` | Formulário com texto colado e/ou até 10 arquivos (prints PNG e JPG, .txt do WhatsApp, .zip da exportação com mídia, .pdf, .md, .docx; 4 MB no total), mais nome, telefone, código do imóvel, tipo e data. Aceita arrastar e colar com Ctrl+V. Resultado em cards com botão copiar e "criar lembrete". | `capturas/03-analise.png`, `12-analisar-arquivos.png` |
-| `/painel/clientes` e `/painel/clientes/[id]` | Lista da carteira; página do cliente com fatos consolidados, evolução da temperatura, imóveis de interesse (dados do Jetimob quando há chave), lembretes e linha do tempo. | `capturas/04-cliente.png` |
+| `/painel/clientes` e `/painel/clientes/[id]` | Lista da carteira; página do cliente com fatos consolidados, evolução da temperatura, imóveis de interesse (dados do Jetimob quando há chave), lembretes, linha do tempo e edição da ficha (nome, telefone, e-mail, tipo; o tipo editado fica fixado). | `capturas/04-cliente.png` |
 | `/painel/analises/[id]` | Uma análise salva, com a conversa original. | |
 | `/painel/lembretes` | Atrasados, hoje, próximos, concluídos; criação manual. | `capturas/05-lembretes.png` |
 | `/painel/imoveis` | Imóveis do corretor logado (`getAllProperties` filtrado por `id_corretor`) com busca. | `capturas/06-imoveis.png` |
@@ -79,6 +79,14 @@ Decisões:
   seguindo o padrão do site (`src/app/api/chat/route.ts`) e a regra do
   projeto. Se o painel crescer, vale avaliar `@anthropic-ai/sdk` e
   `@supabase/supabase-js`.
+- **Análise com memória**: quando a conversa é de um cliente que o painel já
+  conhece (mesmo telefone, mesmo nome ou chat do WhatsApp vinculado), a I.A.
+  recebe o histórico junto: última avaliação, resumo, fatos levantados e as
+  conversas anteriores (as mais recentes, até 40 mil caracteres). A instrução
+  é avaliar o cliente como um todo, não o trecho; um pedaço curto do WhatsApp
+  não rebaixa um cliente quente. O tipo (comprador, locatário, proprietário)
+  é decidido pela I.A. com esse contexto, e o que o corretor fixar na ficha
+  ou no formulário fica marcado como manual e nunca é sobrescrito.
 - **Prints de conversa**: imagens não viram texto no servidor. Vão para a I.A.
   como imagem, e a análise devolve, no campo `transcricao`, o diálogo que leu.
   Essa transcrição é o que fica guardado no histórico do cliente, e aparece na

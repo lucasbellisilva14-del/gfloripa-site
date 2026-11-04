@@ -89,6 +89,17 @@ ok((await page.textContent('h1')).includes('Mariana'), 'página do cliente abre'
 ok(page.url().includes('demo-cli-mariana'), 'análise foi associada ao cliente demo existente pelo telefone')
 const lembretesCli = await page.$$('.p-timeline li')
 ok(lembretesCli.length >= 2, `linha do tempo com ${lembretesCli.length} conversas`)
+// 5b. correcao manual da ficha: o tipo escolhido fica fixado
+await page.click('button:has-text("Editar ficha")')
+await page.waitForSelector('#ed-tipo')
+await page.selectOption('#ed-tipo', 'proprietario')
+await page.click('button:has-text("Salvar")')
+await page.waitForSelector('button:has-text("Tipo fixado por você")', { timeout: 15000 })
+ok(await page.isVisible('.p-badge:has-text("Proprietário")'), 'tipo editado na ficha aparece')
+ok(true, 'tipo fixado manualmente fica marcado')
+await page.click('button:has-text("liberar")')
+await page.waitForFunction(() => !document.body.textContent.includes('Tipo fixado por você'), null, { timeout: 15000 })
+ok(true, 'liberar devolve a decisao do tipo para a I.A.')
 await page.screenshot({ path: `${OUT}/04-cliente.png`, fullPage: true })
 
 // 6. lembretes: concluir

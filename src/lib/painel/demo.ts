@@ -31,6 +31,7 @@ export const CONVERSA_DEMO = `[24/10/2026 09:12] Mariana Costa: Bom dia Lucas! V
 
 export const ANALISE_DEMO: AnaliseResultado = {
   transcricao: null,
+  tipo_cliente: 'comprador',
   resumo:
     'Mariana Costa, de Caxias do Sul, procura casa de 3 quartos na Gamboa para veranear agora e morar em cerca de 2 anos. Já vendeu o apartamento (R$ 600 mil de entrada) e tem pré-aprovação informal no Banrisul. Visita agendada para domingo, 1 de novembro, às 15h, para as casas C0412 e C0398. O marido Ricardo decide junto e considera o valor de R$ 1,39 milhão alto.',
   temperatura: {
@@ -180,6 +181,7 @@ export function dadosDemo() {
       telefone: '54999110001',
       email: 'mariana.demo@example.com',
       tipo: 'comprador',
+      tipo_origem: 'ia',
       origem: 'Anúncio do site',
       temperatura: 'quente',
       nota_temperatura: 78,
@@ -196,6 +198,7 @@ export function dadosDemo() {
       telefone: '51999220002',
       email: null,
       tipo: 'comprador',
+      tipo_origem: 'ia',
       origem: 'Instagram',
       temperatura: 'muito_quente',
       nota_temperatura: 90,
@@ -212,6 +215,7 @@ export function dadosDemo() {
       telefone: '48999330003',
       email: 'fernanda.demo@example.com',
       tipo: 'locatario',
+      tipo_origem: 'ia',
       origem: 'Indicação',
       temperatura: 'morno',
       nota_temperatura: 45,
@@ -228,6 +232,7 @@ export function dadosDemo() {
       telefone: '48999440004',
       email: null,
       tipo: 'proprietario',
+      tipo_origem: 'ia',
       origem: 'Placa',
       temperatura: 'morno',
       nota_temperatura: 52,
@@ -244,6 +249,7 @@ export function dadosDemo() {
       telefone: '11999550005',
       email: null,
       tipo: 'comprador',
+      tipo_origem: 'ia',
       origem: 'Portal',
       temperatura: 'frio',
       nota_temperatura: 18,

@@ -68,6 +68,8 @@ export type Cliente = {
   telefone: string | null
   email: string | null
   tipo: TipoCliente
+  // 'manual' = fixado pelo corretor na ficha ou no formulário; a I.A. não mexe
+  tipo_origem: 'ia' | 'manual'
   origem: string | null
   temperatura: Temperatura | null
   nota_temperatura: number | null
@@ -147,6 +149,8 @@ export type AnaliseResultado = {
   // a entrada já era texto
   transcricao: string | null
   resumo: string
+  // papel do cliente deduzido pela I.A. com o histórico em conta
+  tipo_cliente: TipoCliente
   temperatura: {
     nivel: Temperatura
     nota: number // 0 a 100
