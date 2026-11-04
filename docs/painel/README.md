@@ -20,6 +20,7 @@ Funciona em três situações, sem quebrar o site público em nenhuma delas:
 | --- | --- | --- |
 | `/painel/login` | Senha única, cookie de sessão assinado (14 dias). | `capturas/01-login.png` |
 | `/painel` | Dashboard: leads por temperatura, lembretes de hoje e atrasados, análises na semana, clientes ordenados por temperatura, últimas análises. | `capturas/02-dashboard.png`, `08-dashboard-escuro.png` |
+| `/painel/whatsapp` | Ponte com o WhatsApp: código QR, status da conexão e conversas capturadas, com botão para analisar cada uma. Somente leitura, nunca envia. Ver `whatsapp.md`. | `capturas/10-whatsapp.png`, `11-whatsapp-analise.png` |
 | `/painel/analisar` | Formulário (texto ou arquivo .txt/.md/.pdf, nome, telefone, código do imóvel, tipo, data da conversa) e resultado em cards com botão copiar e "criar lembrete". | `capturas/03-analise.png` |
 | `/painel/clientes` e `/painel/clientes/[id]` | Lista da carteira; página do cliente com fatos consolidados, evolução da temperatura, imóveis de interesse (dados do Jetimob quando há chave), lembretes e linha do tempo. | `capturas/04-cliente.png` |
 | `/painel/analises/[id]` | Uma análise salva, com a conversa original. | |
@@ -47,8 +48,12 @@ src/app/api/painel/
   clientes                           listar / cadastro manual
   padrao                             ler / salvar o padrão de atendimento
   jetimob/enviar                     envio ao Jetimob (atrás de flag)
+servicos/whatsapp/                   ponte do WhatsApp (fora da Vercel, ver whatsapp.md)
 src/lib/painel/
   auth.ts, sessao.ts                 senha, HMAC (Web Crypto), corretor logado
+  whatsapp-token.ts                  autenticação por token das rotas da ponte
+  registrar-analise.ts               fluxo compartilhado "analisar e guardar"
+  transcricao.ts                     mensagens do WhatsApp viram transcrição
   db.ts                              interface PainelDb + fábrica (Supabase ou memória)
   db-supabase.ts                     PostgREST via fetch (service role, só no servidor)
   db-memoria.ts                      memória + JSON local (.painel-dados/, ignorado pelo git)
@@ -106,6 +111,7 @@ Environment Variables (variável nova exige Redeploy).
 | `PAINEL_ANTHROPIC_EFFORT` | não (padrão `medium`) | Esforço de raciocínio: `low`, `medium`, `high`. |
 | `PAINEL_DEMO` | não | `1` libera a senha `demo` mesmo em produção (só para preview). |
 | `PAINEL_JETIMOB_ENVIO` | não | `1` ativa o botão "Enviar para o Jetimob" (usa `JETIMOB_PUBLIC_KEY`/`JETIMOB_PRIVATE_KEY`). |
+| `PAINEL_WHATSAPP_TOKEN` | não | Token compartilhado com o serviço `servicos/whatsapp`. Sem ele a ponte do WhatsApp fica desligada. Ver `whatsapp.md`. |
 
 Custo estimado por análise com Sonnet 5.5: uma conversa de WhatsApp típica
 (3 a 6 mil tokens de entrada com o padrão de atendimento, 2 a 3 mil de saída)
@@ -126,8 +132,9 @@ Verificações:
 ```bash
 npm run lint
 npm run build
-npm test                 # validador da análise (node:test)
-node scripts/qa-painel.mjs   # com o servidor no ar; em modo demo (PAINEL_DEMO=1 se for next start)
+npm test                     # validador da análise (node:test)
+node scripts/qa-painel.mjs   # fluxo das telas; servidor no ar, em modo demo
+node scripts/qa-whatsapp.mjs # ponte do WhatsApp; precisa de PAINEL_WHATSAPP_TOKEN
 ```
 
 ## Aplicar as migrations no Supabase
@@ -171,8 +178,12 @@ valer na hora; a versão definitiva deve voltar para o arquivo (versionado).
   de análises com Batches da Anthropic (50% mais barato).
 - **Relatório semanal da carteira**: clientes que esfriaram, promessas não
   cumpridas, previsão de fechamento; gerado pela I.A. a partir das análises.
-- **Integração WhatsApp Business API**: captura automática das conversas,
-  sem copiar e colar.
+- **WhatsApp oficial**: migrar a ponte para a Cloud API com modo Coexistence,
+  que mantém o mesmo número no celular e elimina o risco de bloqueio. Hoje a
+  captura usa a ponte não oficial de `servicos/whatsapp` (ver `whatsapp.md`).
+- **Análise automática**: hoje a conversa capturada do WhatsApp é analisada
+  quando o corretor clica. O passo seguinte é analisar sozinha a cada tanto de
+  mensagens novas, ou quando a conversa fica parada.
 - **Jetimob**: quando a Jetimob liberar o MCP ou endpoints de escrita, ligar
   `jetimob-escrita.ts` para anotar histórico, criar tarefa e atualizar o
   funil direto no CRM (hoje só criação de lead, atrás de flag).

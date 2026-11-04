@@ -119,7 +119,53 @@ ok(await mp.isVisible('.p-mobile-nav'), 'menu mobile abre')
 await mp.screenshot({ path: `${OUT}/09-mobile.png`, fullPage: false })
 ok(!(await mp.isVisible('.lia-fab').catch(() => false)), 'Lia (chat do site) não aparece no painel')
 
+// 9b. tela do WhatsApp: semeia pela ponte e confere o que a tela mostra
+const TOKEN_WA = process.env.PAINEL_WHATSAPP_TOKEN || 'token-de-teste'
+const ponte = (caminho, corpo) =>
+  fetch(BASE + '/api/painel/whatsapp/' + caminho, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', authorization: 'Bearer ' + TOKEN_WA },
+    body: JSON.stringify(corpo),
+  })
+const respEstado = await ponte('estado', { status: 'conectado', qr: null, numero: '5548999990000' })
+if (respEstado.ok) {
+  const t0 = Date.parse('2026-11-03T12:00:00Z')
+  await ponte('entrada', {
+    mensagens: [
+      ['entrada', 'Bom dia Lucas! A casa C0412 na Gamboa ainda esta disponivel?'],
+      ['saida', 'Bom dia, Mariana! Esta sim. Procuram para morar ou veranear?'],
+      ['entrada', 'Veranear. Temos 600 mil de entrada e financiamos o resto.'],
+      ['saida', 'Consigo agendar visita domingo as 15h, serve?'],
+      ['entrada', 'Serve! Me liga sexta a tarde pra confirmar, depois das 14h.'],
+    ].map(([direcao, texto], i) => ({
+      wa_chat_id: '5554999110001@s.whatsapp.net',
+      wa_id: 'qa' + i,
+      direcao,
+      nome: 'Mariana Costa',
+      autor: direcao === 'entrada' ? 'Mariana Costa' : null,
+      texto,
+      data: new Date(t0 + i * 60000).toISOString(),
+    })),
+  })
+  await page.goto(BASE + '/painel/whatsapp')
+  await page.waitForSelector('h1')
+  ok(await page.isVisible('text=Conectado'), 'tela do WhatsApp mostra conexao ativa')
+  ok((await page.$$('.p-list li')).length === 1, 'conversa capturada aparece na lista')
+  await page.screenshot({ path: OUT + '/10-whatsapp.png', fullPage: true })
+  await page.click('button:has-text("Analisar")')
+  await page.waitForSelector('#resultado-wa', { timeout: 60000 })
+  ok(await page.isVisible('text=mensagens analisadas'), 'analise da conversa do WhatsApp na tela')
+  ok(await page.isVisible('text=ficha do cliente'), 'conversa vira ficha de cliente')
+  await page.screenshot({ path: OUT + '/11-whatsapp-analise.png', fullPage: true })
+} else {
+  ok(true, 'tela do WhatsApp pulada (PAINEL_WHATSAPP_TOKEN nao configurado)')
+}
+
 // 10. logout
+// volta ao início primeiro: na tela do WhatsApp a página fica longa depois da
+// análise e o botão da barra lateral nem sempre está ao alcance do clique
+await page.goto(`${BASE}/painel`)
+await page.waitForSelector('button:has-text("Sair")')
 await page.click('button:has-text("Sair")')
 await page.waitForURL('**/painel/login')
 ok(true, 'logout volta ao login')

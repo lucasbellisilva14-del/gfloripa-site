@@ -23,3 +23,7 @@ export const IconeConfig = ({ className }: P) => (
 export const IconeCopiar = ({ className }: P) => (
   <svg {...base} className={className}><rect x="9" y="9" width="11" height="11" rx="2" /><path d="M5 15V5a2 2 0 0 1 2-2h10" /></svg>
 )
+
+export const IconeWhatsapp = ({ className }: P) => (
+  <svg {...base} className={className}><path d="M3.5 20.5 5 16.3A8 8 0 1 1 8.2 19.3z" /><path d="M9 10c0 3 2 5 5 5 1 0 1.5-.6 1.5-1.2 0-.4-1.6-1.3-1.9-1.3-.4 0-.7.8-1 .8-.6 0-2-1.4-2-2 0-.3.8-.6.8-1 0-.3-.9-1.9-1.3-1.9C9.6 8.4 9 8.9 9 10z" /></svg>
+)

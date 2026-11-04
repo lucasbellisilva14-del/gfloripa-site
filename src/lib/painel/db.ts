@@ -12,12 +12,17 @@
 import type {
   Analise,
   AnaliseResultado,
+  ChatWhatsapp,
   Cliente,
   Conversa,
   CorretorLogado,
+  EstadoWhatsapp,
   ImovelInteresse,
   Lembrete,
+  MensagemRecebida,
+  MensagemWhatsapp,
   StatusLembrete,
+  StatusWhatsapp,
   Temperatura,
   Estagio,
   TipoCliente,
@@ -106,6 +111,27 @@ export interface PainelDb {
   // configuração chave/valor (ex.: padrão de atendimento editado no painel)
   obterConfig(chave: string): Promise<string | null>
   salvarConfig(chave: string, valor: string, corretor?: CorretorLogado): Promise<void>
+
+  // --- ponte do WhatsApp (somente leitura) ---
+  obterEstadoWhatsapp(corretorId: number): Promise<EstadoWhatsapp | null>
+  salvarEstadoWhatsapp(corretorId: number, patch: PatchEstadoWhatsapp): Promise<EstadoWhatsapp>
+  obterSessaoWhatsapp(corretorId: number): Promise<unknown | null>
+  salvarSessaoWhatsapp(corretorId: number, dados: unknown): Promise<void>
+  apagarSessaoWhatsapp(corretorId: number): Promise<void>
+  // Grava as mensagens novas e devolve quantas foram realmente inseridas
+  // (as repetidas são ignoradas pelo id do WhatsApp).
+  registrarMensagensWhatsapp(corretorId: number, mensagens: MensagemRecebida[]): Promise<number>
+  listarChatsWhatsapp(corretorId: number, incluirArquivados?: boolean): Promise<ChatWhatsapp[]>
+  obterChatWhatsapp(id: string): Promise<ChatWhatsapp | null>
+  listarMensagensDoChat(chatId: string, limite?: number): Promise<MensagemWhatsapp[]>
+  atualizarChatWhatsapp(id: string, patch: Partial<Pick<ChatWhatsapp, 'cliente_id' | 'arquivado' | 'nome'>>): Promise<ChatWhatsapp | null>
+}
+
+export type PatchEstadoWhatsapp = {
+  status?: StatusWhatsapp
+  qr?: string | null
+  numero?: string | null
+  detalhe?: string | null
 }
 
 export function supabaseConfigurado(): boolean {

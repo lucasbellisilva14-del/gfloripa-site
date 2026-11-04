@@ -44,8 +44,12 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
   padrão de atendimento que treina a I.A. em src/painel/padrao-atendimento.md.
 - Sem PAINEL_SENHA, SUPABASE_* e ANTHROPIC_API_KEY roda em modo demo (senha
   "demo", dados de exemplo, análise fixa). Nunca pode quebrar o site público.
-- Testes: npm test (validador da análise) e node scripts/qa-painel.mjs (fluxo
-  completo com Playwright, servidor no ar).
+- Ponte do WhatsApp em servicos/whatsapp (Baileys, somente leitura, roda fora
+  da Vercel porque precisa de socket aberto). Repassa mensagens ao painel por
+  token (PAINEL_WHATSAPP_TOKEN). Nunca envia mensagem: é o que mais provoca
+  bloqueio de número. Ver docs/painel/whatsapp.md.
+- Testes: npm test (validador da análise), node scripts/qa-painel.mjs (telas,
+  Playwright) e node scripts/qa-whatsapp.mjs (ponte), com o servidor no ar.
 
 ## Variáveis de ambiente (.env.local, NUNCA commitar)
 
