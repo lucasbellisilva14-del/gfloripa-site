@@ -77,6 +77,7 @@ export async function criarDbMemoria(): Promise<PainelDb> {
         telefone: input.telefone ?? null,
         email: input.email ?? null,
         tipo: input.tipo ?? 'indefinido',
+        tipo_origem: input.tipo_origem ?? 'ia',
         origem: input.origem ?? null,
         temperatura: null,
         nota_temperatura: null,
