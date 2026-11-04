@@ -14,6 +14,8 @@ import type {
   AnaliseResultado,
   ChatWhatsapp,
   Cliente,
+  ComandoWhatsapp,
+  DiagnosticoWhatsapp,
   Conversa,
   CorretorLogado,
   EstadoWhatsapp,
@@ -124,7 +126,14 @@ export interface PainelDb {
   listarChatsWhatsapp(corretorId: number, incluirArquivados?: boolean): Promise<ChatWhatsapp[]>
   obterChatWhatsapp(id: string): Promise<ChatWhatsapp | null>
   listarMensagensDoChat(chatId: string, limite?: number): Promise<MensagemWhatsapp[]>
-  atualizarChatWhatsapp(id: string, patch: Partial<Pick<ChatWhatsapp, 'cliente_id' | 'arquivado' | 'nome'>>): Promise<ChatWhatsapp | null>
+  atualizarChatWhatsapp(
+    id: string,
+    patch: Partial<Pick<ChatWhatsapp, 'cliente_id' | 'arquivado' | 'nome' | 'analisado_em' | 'mensagens_analisadas'>>
+  ): Promise<ChatWhatsapp | null>
+  // Canal de comando: a tela grava, o serviço consome (lê e limpa numa só
+  // operação, para não executar duas vezes).
+  definirComandoWhatsapp(corretorId: number, comando: ComandoWhatsapp | null): Promise<void>
+  consumirComandoWhatsapp(corretorId: number): Promise<ComandoWhatsapp | null>
 }
 
 export type PatchEstadoWhatsapp = {
@@ -132,6 +141,7 @@ export type PatchEstadoWhatsapp = {
   qr?: string | null
   numero?: string | null
   detalhe?: string | null
+  diagnostico?: DiagnosticoWhatsapp | null
 }
 
 export function supabaseConfigurado(): boolean {
