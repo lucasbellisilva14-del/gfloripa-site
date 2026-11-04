@@ -32,7 +32,7 @@ export async function extrairTexto(arquivo: File): Promise<ArquivoExtraido> {
   throw new Error('Formato não suportado. Envie .txt, .md ou .pdf.')
 }
 
-function decodificarTexto(bytes: Buffer): string {
+export function decodificarTexto(bytes: Buffer): string {
   // exportações do WhatsApp vêm em UTF-8 (às vezes com BOM); caímos para
   // latin1 se houver caracteres inválidos
   let texto = bytes.toString('utf8')
