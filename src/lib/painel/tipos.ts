@@ -143,6 +143,9 @@ export type TipoInsight =
 export type Confianca = 'alta' | 'media' | 'baixa'
 
 export type AnaliseResultado = {
+  // transcrição do diálogo quando a conversa chegou como print; null quando
+  // a entrada já era texto
+  transcricao: string | null
   resumo: string
   temperatura: {
     nivel: Temperatura

@@ -23,6 +23,7 @@ export const ANALISE_JSON_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   required: [
+    'transcricao',
     'resumo',
     'temperatura',
     'estagio',
@@ -36,6 +37,11 @@ export const ANALISE_JSON_SCHEMA = {
     'qualidade_atendimento',
   ],
   properties: {
+    transcricao: {
+      ...strOuNulo,
+      description:
+        'Quando a conversa vier como imagem (print), transcreva aqui o diálogo lido, uma mensagem por linha, no formato "[data hora] Quem: texto" quando visível. Quando a conversa vier como texto, devolva null.',
+    },
     resumo: { ...str, description: 'Resumo executivo da conversa em 3 a 5 linhas, em português.' },
     temperatura: {
       type: 'object',
@@ -304,6 +310,7 @@ export function validarAnalise(bruto: unknown): { analise: AnaliseResultado; avi
 
   return {
     analise: {
+      transcricao: textoOuNulo(bruto.transcricao),
       resumo,
       temperatura: { nivel, nota: notaTemp, justificativa: texto(temp.justificativa, 'temperatura.justificativa', avisos, false) },
       estagio,

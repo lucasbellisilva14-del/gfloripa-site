@@ -6,6 +6,7 @@
 // com fetch, sem SDK, para não adicionar dependência.
 
 import { ANALISE_JSON_SCHEMA, extrairJson, validarAnalise } from './analise-schema'
+import type { ImagemEnviada } from './extrair-conteudo'
 import { ANALISE_DEMO } from './demo'
 import { obterPadraoAtendimento } from './padrao-atendimento'
 import type { AnaliseResultado, TipoCliente } from './tipos'
@@ -40,6 +41,8 @@ export function estimarCustoUsd(modelo: string, tokensEntrada: number, tokensSai
 
 export type EntradaAnalise = {
   conversa: string
+  // prints da conversa, lidos pela visão do modelo; podem vir sozinhos
+  imagens?: ImagemEnviada[]
   dataConversa: string // AAAA-MM-DD
   corretorNome: string
   clienteNome?: string | null
@@ -69,7 +72,14 @@ Regras gerais:
 - Texto para o Jetimob: siga a ordem da seção "Padrão de registro no Jetimob" do padrão de atendimento, em um único parágrafo objetivo.
 - Qualidade do atendimento: avalie o CORRETOR (não o cliente) contra as perguntas de qualificação obrigatórias e as regras do padrão. Seja direto sobre o que faltou perguntar.
 - Insights: aponte sinais que uma pessoa ocupada deixaria passar (urgência, hesitação, concorrência, decisor ausente, risco de perda, oportunidade). Cada insight em uma frase ou duas, com o que fazer a respeito.
-- Nunca use travessão (—) ou meia-risca (–) em nenhum texto. Escreva tudo em português do Brasil.`
+- Nunca use travessão (—) ou meia-risca (–) em nenhum texto. Escreva tudo em português do Brasil.
+
+QUANDO A CONVERSA VIER COMO IMAGEM (prints de tela):
+- Leia os prints na ordem em que aparecem; costumam ser partes seguidas da mesma conversa, e pode haver repetição de mensagens entre um e outro.
+- Preencha o campo transcricao com o diálogo que leu, uma mensagem por linha, no formato "[data hora] Quem: texto" quando data e hora estiverem visíveis, ou "Quem: texto" quando não estiverem. No WhatsApp, as mensagens alinhadas à direita são do corretor e as da esquerda são do cliente.
+- Não invente trecho ilegível: escreva [ilegível] no lugar.
+- Se os prints não contiverem conversa nenhuma, diga isso no resumo em vez de inventar uma análise.
+- Quando a conversa vier como texto, devolva transcricao como null.`
 
 function montarSystem(padrao: string): { type: 'text'; text: string; cache_control?: { type: 'ephemeral' } }[] {
   return [
@@ -78,7 +88,23 @@ function montarSystem(padrao: string): { type: 'text'; text: string; cache_contr
   ]
 }
 
+type BlocoConteudo =
+  | { type: 'text'; text: string }
+  | { type: 'image'; source: { type: 'base64'; media_type: string; data: string } }
+
+function montarConteudoUsuario(e: EntradaAnalise): BlocoConteudo[] {
+  const imagens = e.imagens ?? []
+  // as imagens vêm antes do texto: o modelo lê os prints e depois a instrução
+  const blocos: BlocoConteudo[] = imagens.map((i) => ({
+    type: 'image' as const,
+    source: { type: 'base64' as const, media_type: i.media_type, data: i.data },
+  }))
+  blocos.push({ type: 'text', text: montarMensagemUsuario(e) })
+  return blocos
+}
+
 function montarMensagemUsuario(e: EntradaAnalise): string {
+  const imagens = e.imagens ?? []
   const linhas = [
     `DATA DA CONVERSA (referência para datas relativas): ${e.dataConversa}`,
     `CORRETOR: ${e.corretorNome}`,
@@ -87,13 +113,22 @@ function montarMensagemUsuario(e: EntradaAnalise): string {
     `CÓDIGO DO IMÓVEL INFORMADO: ${e.codigoImovel?.trim() || 'não informado'}`,
     `TIPO DE CLIENTE INFORMADO: ${e.tipoCliente && e.tipoCliente !== 'indefinido' ? ROTULO_TIPO_CLIENTE[e.tipoCliente] : 'não informado (deduza pela conversa)'}`,
     '',
-    'CONVERSA:',
-    '"""',
-    e.conversa.trim(),
-    '"""',
-    '',
-    'Devolva a análise no formato JSON exigido.',
   ]
+  if (imagens.length) {
+    linhas.push(
+      `CONVERSA: ${imagens.length === 1 ? 'o print acima' : `os ${imagens.length} prints acima, em ordem`}.`,
+      'Transcreva o diálogo no campo transcricao e analise a partir dele.'
+    )
+  }
+  if (e.conversa.trim()) {
+    linhas.push(
+      imagens.length ? 'TEXTO ADICIONAL ENVIADO PELO CORRETOR:' : 'CONVERSA:',
+      '"""',
+      e.conversa.trim(),
+      '"""'
+    )
+  }
+  linhas.push('', 'Devolva a análise no formato JSON exigido.')
   return linhas.join('\n')
 }
 
@@ -132,7 +167,7 @@ export async function analisarConversa(e: EntradaAnalise): Promise<SaidaAnalise>
     },
     body: JSON.stringify({
       model: modelo,
-      max_tokens: 12000,
+      max_tokens: 16000,
       // esforço médio: análise rápida o suficiente para caber no tempo da
       // função serverless, com raciocínio adaptativo ligado (padrão do modelo)
       output_config: {
@@ -140,7 +175,7 @@ export async function analisarConversa(e: EntradaAnalise): Promise<SaidaAnalise>
         format: { type: 'json_schema', schema: ANALISE_JSON_SCHEMA },
       },
       system: montarSystem(padrao),
-      messages: [{ role: 'user', content: montarMensagemUsuario(e) }],
+      messages: [{ role: 'user', content: montarConteudoUsuario(e) }],
     }),
   })
 

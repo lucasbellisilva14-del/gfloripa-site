@@ -3,7 +3,8 @@ import { exigirCorretor } from '@/lib/painel/sessao'
 import { iaDisponivel } from '@/lib/painel/analise'
 import { analisarERegistrar } from '@/lib/painel/registrar-analise'
 import { ErroAnaliseInvalida } from '@/lib/painel/analise-schema'
-import { detectarDataConversa, extrairTexto } from '@/lib/painel/extrair-texto'
+import { detectarDataConversa } from '@/lib/painel/extrair-texto'
+import { descreverOrigem, extrairConteudo, MAXIMO_ARQUIVOS } from '@/lib/painel/extrair-conteudo'
 import type { TipoCliente } from '@/lib/painel/tipos'
 
 // A análise pode levar dezenas de segundos em conversas longas.
@@ -26,22 +27,27 @@ export async function POST(request: NextRequest) {
     return Response.json({ error: 'Envie o formulário como multipart/form-data' }, { status: 400 })
   }
 
-  let texto = String(form.get('texto') ?? '').trim()
-  let nomeArquivo: string | null = null
+  const textoColado = String(form.get('texto') ?? '').trim()
   const avisos: string[] = []
-  const arquivo = form.get('arquivo')
-  if (arquivo instanceof File && arquivo.size > 0) {
-    try {
-      const extraido = await extrairTexto(arquivo)
-      texto = extraido.texto.trim()
-      nomeArquivo = arquivo.name
-      if (extraido.aviso) avisos.push(extraido.aviso)
-    } catch (err) {
-      return Response.json({ error: err instanceof Error ? err.message : 'Falha ao ler o arquivo' }, { status: 400 })
-    }
+  const arquivos = form.getAll('arquivo').filter((a): a is File => a instanceof File && a.size > 0)
+
+  let conteudo
+  try {
+    conteudo = await extrairConteudo(arquivos)
+  } catch (err) {
+    return Response.json({ error: err instanceof Error ? err.message : 'Falha ao ler os arquivos' }, { status: 400 })
   }
-  if (texto.length < 20) {
-    return Response.json({ error: 'Cole a conversa (ao menos algumas linhas) ou envie um arquivo.' }, { status: 400 })
+  avisos.push(...conteudo.avisos)
+
+  const texto = [textoColado, conteudo.texto].filter(Boolean).join('\n\n').trim()
+  const nomeArquivo = conteudo.nomes.length ? conteudo.nomes.join(', ').slice(0, 300) : null
+
+  // com print, o texto pode ser curto ou vazio: a conversa está na imagem
+  if (!conteudo.imagens.length && texto.length < 20) {
+    return Response.json(
+      { error: `Cole a conversa (ao menos algumas linhas), ou envie até ${MAXIMO_ARQUIVOS} arquivos ou prints.` },
+      { status: 400 }
+    )
   }
   if (texto.length > MAX_CARACTERES) {
     return Response.json({ error: `Conversa muito longa (${texto.length} caracteres). Limite: ${MAX_CARACTERES}.` }, { status: 400 })
@@ -56,13 +62,14 @@ export async function POST(request: NextRequest) {
   const dataConversa = /^\d{4}-\d{2}-\d{2}$/.test(dataInformada)
     ? dataInformada
     : detectarDataConversa(texto) ?? new Date().toISOString().slice(0, 10)
-  const origem = nomeArquivo ? 'arquivo' : String(form.get('origem') ?? 'colado')
+  const origem = conteudo.nomes.length ? descreverOrigem(conteudo) : String(form.get('origem') ?? 'colado')
 
   let registro
   try {
     registro = await analisarERegistrar({
       corretor,
       texto,
+      imagens: conteudo.imagens,
       dataConversa,
       clienteNome,
       clienteTelefone,

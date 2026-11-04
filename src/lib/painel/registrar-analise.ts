@@ -7,12 +7,16 @@
 // comportarem exatamente igual.
 
 import { analisarConversa, type SaidaAnalise } from './analise'
+import type { ImagemEnviada } from './extrair-conteudo'
 import { getDb } from './db'
 import type { Analise, Cliente, Conversa, CorretorLogado, TipoCliente } from './tipos'
 
 export type EntradaRegistro = {
   corretor: CorretorLogado
   texto: string
+  // prints da conversa; quando vêm sozinhos, o texto guardado no histórico é
+  // a transcrição que a própria I.A. devolve
+  imagens?: ImagemEnviada[]
   dataConversa: string // AAAA-MM-DD
   clienteNome?: string | null
   clienteTelefone?: string | null
@@ -34,6 +38,7 @@ export type ResultadoRegistro = {
 export async function analisarERegistrar(e: EntradaRegistro): Promise<ResultadoRegistro> {
   const saida = await analisarConversa({
     conversa: e.texto,
+    imagens: e.imagens,
     dataConversa: e.dataConversa,
     corretorNome: e.corretor.nome,
     clienteNome: e.clienteNome,
@@ -64,10 +69,17 @@ export async function analisarERegistrar(e: EntradaRegistro): Promise<ResultadoR
     })
   }
 
+  // conversa que chegou só como print: guardamos a transcrição lida pela I.A.,
+  // senão o histórico do cliente ficaria com uma entrada vazia
+  const textoGuardado =
+    e.texto.trim() ||
+    r.transcricao ||
+    `[${e.imagens?.length ?? 0} print(s) de conversa, sem transcrição legível]`
+
   const conversa = await db.criarConversa({
     cliente_id: cliente.id,
     corretor_id: e.corretor.id,
-    texto: e.texto,
+    texto: textoGuardado,
     data_conversa: `${e.dataConversa}T12:00:00.000Z`,
     origem: e.origem,
     nome_arquivo: e.nomeArquivo ?? null,
