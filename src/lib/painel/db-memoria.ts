@@ -7,7 +7,7 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { PainelDb, PatchEstadoWhatsapp } from './db'
 import { agoraIso, novoId, normalizarTelefone, ordenarClientes } from './db'
-import type { Analise, ChatWhatsapp, Cliente, Conversa, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemRecebida, MensagemWhatsapp } from './tipos'
+import type { Analise, ChatWhatsapp, Cliente, Conversa, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemWhatsapp } from './tipos'
 import { dadosDemo } from './demo'
 
 type Estado = {
