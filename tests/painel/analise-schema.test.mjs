@@ -96,6 +96,26 @@ test('normalizarDataLembrete aceita vários formatos e rejeita datas impossívei
   assert.equal(normalizarDataLembrete(42), null)
 })
 
+test('transcricao: null quando a conversa veio como texto, string quando veio de print', () => {
+  const semPrint = validarAnalise(ANALISE_DEMO).analise
+  assert.equal(semPrint.transcricao, null)
+
+  const comPrint = structuredClone(ANALISE_DEMO)
+  comPrint.transcricao = '[24/10 09:12] Mariana: Bom dia!\n[24/10 09:20] Lucas: Bom dia!'
+  const validada = validarAnalise(comPrint).analise
+  assert.ok(validada.transcricao.includes('Mariana'))
+
+  // transcrição vazia conta como ausente, para não poluir o histórico
+  const vazia = structuredClone(ANALISE_DEMO)
+  vazia.transcricao = '   '
+  assert.equal(validarAnalise(vazia).analise.transcricao, null)
+})
+
+test('o esquema exige transcricao e aceita nulo', () => {
+  assert.ok(ANALISE_JSON_SCHEMA.required.includes('transcricao'))
+  assert.ok(ANALISE_JSON_SCHEMA.properties.transcricao.anyOf.some((o) => o.type === 'null'))
+})
+
 test('nivelPelaNota segue as faixas do padrão de atendimento', () => {
   assert.equal(nivelPelaNota(0), 'frio')
   assert.equal(nivelPelaNota(29), 'frio')

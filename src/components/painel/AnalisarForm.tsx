@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import type { Analise } from '@/lib/painel/tipos'
 import AnaliseResultadoView from './AnaliseResultadoView'
 
@@ -13,20 +13,58 @@ type Resposta = {
   data_conversa: string
 }
 
+const MAXIMO_ARQUIVOS = 10
+const LIMITE_TOTAL = 4 * 1024 * 1024
+const ACEITOS = '.txt,.md,.pdf,.zip,.docx,image/png,image/jpeg,image/webp,image/gif'
+
+const ehImagem = (f: File) => f.type.startsWith('image/') || /\.(png|jpe?g|webp|gif)$/i.test(f.name)
+const kb = (n: number) => `${Math.max(1, Math.round(n / 1024))} KB`
+
 export default function AnalisarForm({ iaDisponivel, envioJetimob, exemplo }: { iaDisponivel: boolean; envioJetimob: boolean; exemplo: string }) {
   const [texto, setTexto] = useState('')
-  const [arquivo, setArquivo] = useState<File | null>(null)
+  const [arquivos, setArquivos] = useState<File[]>([])
   const [enviando, setEnviando] = useState(false)
   const [erro, setErro] = useState<string | null>(null)
   const [resposta, setResposta] = useState<Resposta | null>(null)
+  const [arrastando, setArrastando] = useState(false)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  function adicionar(novos: File[]) {
+    if (!novos.length) return
+    setErro(null)
+    setArquivos((atuais) => {
+      // evita o mesmo arquivo duas vezes quando se arrasta de novo
+      const chave = (f: File) => `${f.name}|${f.size}|${f.lastModified}`
+      const vistos = new Set(atuais.map(chave))
+      const juntos = [...atuais, ...novos.filter((f) => !vistos.has(chave(f)))]
+      if (juntos.length > MAXIMO_ARQUIVOS) {
+        setErro(`Máximo de ${MAXIMO_ARQUIVOS} arquivos por análise.`)
+        return juntos.slice(0, MAXIMO_ARQUIVOS)
+      }
+      const total = juntos.reduce((s, f) => s + f.size, 0)
+      if (total > LIMITE_TOTAL) {
+        setErro(`Os arquivos somam ${(total / 1024 / 1024).toFixed(1)} MB e o limite é 4 MB. Envie menos prints de cada vez.`)
+      }
+      return juntos
+    })
+  }
+
+  // colar print direto do recorte de tela, que é como o corretor costuma ter
+  function aoColar(e: React.ClipboardEvent) {
+    const imagens = Array.from(e.clipboardData.files).filter(ehImagem)
+    if (imagens.length) {
+      e.preventDefault()
+      adicionar(imagens)
+    }
+  }
 
   async function enviar(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setErro(null)
     setResposta(null)
     const form = new FormData(e.currentTarget)
-    if (arquivo) form.set('arquivo', arquivo)
-    else form.delete('arquivo')
+    form.delete('arquivo')
+    for (const f of arquivos) form.append('arquivo', f)
     setEnviando(true)
     try {
       const res = await fetch('/api/painel/analisar', { method: 'POST', body: form })
@@ -44,9 +82,12 @@ export default function AnalisarForm({ iaDisponivel, envioJetimob, exemplo }: { 
     }
   }
 
+  const totalBytes = arquivos.reduce((s, f) => s + f.size, 0)
+  const temImagem = arquivos.some(ehImagem)
+
   return (
     <>
-      <form onSubmit={enviar} className="p-card" style={{ display: 'grid', gap: 16 }}>
+      <form onSubmit={enviar} onPaste={aoColar} className="p-card" style={{ display: 'grid', gap: 16 }}>
         {!iaDisponivel && (
           <div className="p-alert p-alert-warn">
             <strong>Modo demonstração.</strong> ANTHROPIC_API_KEY não está configurada: a análise devolve um exemplo fixo para você conhecer a tela. Com a chave, a I.A. analisa a conversa de verdade.
@@ -55,27 +96,87 @@ export default function AnalisarForm({ iaDisponivel, envioJetimob, exemplo }: { 
 
         <div className="p-field">
           <div className="p-row p-between">
-            <label htmlFor="texto">Conversa (cole o texto ou exporte do WhatsApp)</label>
-            <button type="button" className="p-btn p-btn-sm p-btn-ghost" onClick={() => { setTexto(exemplo); setArquivo(null) }}>
+            <label htmlFor="texto">Conversa (cole o texto, ou envie arquivos e prints abaixo)</label>
+            <button type="button" className="p-btn p-btn-sm p-btn-ghost" onClick={() => setTexto(exemplo)}>
               Usar conversa de exemplo
             </button>
           </div>
-          <textarea id="texto" name="texto" className="p-textarea" value={texto} onChange={(e) => setTexto(e.target.value)} placeholder={'[24/10/2026 09:12] Cliente: Bom dia! Vi o anúncio da casa...\n[24/10/2026 09:20] Lucas: Bom dia! ...'} disabled={Boolean(arquivo)} />
+          <textarea
+            id="texto"
+            name="texto"
+            className="p-textarea"
+            value={texto}
+            onChange={(e) => setTexto(e.target.value)}
+            placeholder={'[24/10/2026 09:12] Cliente: Bom dia! Vi o anúncio da casa...\n[24/10/2026 09:20] Lucas: Bom dia! ...\n\nDica: você pode colar um print aqui com Ctrl+V.'}
+          />
         </div>
 
-        <div className="p-dropzone">
-          <input id="arquivo" type="file" accept=".txt,.md,.pdf,text/plain,text/markdown,application/pdf" onChange={(e) => setArquivo(e.target.files?.[0] ?? null)} />
-          {arquivo ? (
-            <span>
-              Arquivo: <strong>{arquivo.name}</strong> ({Math.round(arquivo.size / 1024)} KB){' '}
-              <button type="button" className="p-btn p-btn-sm" style={{ marginLeft: 8 }} onClick={() => setArquivo(null)}>Remover</button>
+        <div
+          className="p-dropzone"
+          style={arrastando ? { borderColor: 'var(--p-gold)', background: 'var(--p-surface)' } : undefined}
+          onDragOver={(e) => {
+            e.preventDefault()
+            setArrastando(true)
+          }}
+          onDragLeave={() => setArrastando(false)}
+          onDrop={(e) => {
+            e.preventDefault()
+            setArrastando(false)
+            adicionar(Array.from(e.dataTransfer.files))
+          }}
+        >
+          <input
+            ref={inputRef}
+            id="arquivo"
+            type="file"
+            multiple
+            accept={ACEITOS}
+            onChange={(e) => {
+              adicionar(Array.from(e.target.files ?? []))
+              e.target.value = ''
+            }}
+          />
+          <span>
+            Arraste aqui, cole com Ctrl+V, ou <label htmlFor="arquivo">escolha arquivos</label>
+            <br />
+            <span className="p-small">
+              Prints de conversa (PNG, JPG), .txt exportado do WhatsApp, .zip da exportação com mídia, .pdf, .md e .docx.
+              Até {MAXIMO_ARQUIVOS} arquivos, 4 MB no total.
             </span>
-          ) : (
-            <span>
-              ou <label htmlFor="arquivo">envie um arquivo</label> .txt exportado do WhatsApp, .md ou .pdf simples (até 2 MB)
-            </span>
-          )}
+          </span>
         </div>
+
+        {arquivos.length > 0 && (
+          <ul className="p-list">
+            {arquivos.map((f, i) => (
+              <li key={`${f.name}-${i}`} className="p-row p-between">
+                <span className="p-row" style={{ gap: 8, minWidth: 0 }}>
+                  <span className="p-badge p-badge-neutro">{ehImagem(f) ? 'print' : (f.name.split('.').pop() ?? 'arquivo')}</span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.name}</span>
+                  <span className="p-small p-muted">{kb(f.size)}</span>
+                </span>
+                <button type="button" className="p-btn p-btn-sm" onClick={() => setArquivos((a) => a.filter((_, j) => j !== i))}>
+                  Remover
+                </button>
+              </li>
+            ))}
+            <li className="p-row p-between p-small p-muted" style={{ border: 0, background: 'transparent', padding: '0 12px' }}>
+              <span>
+                {arquivos.length} arquivo(s), {(totalBytes / 1024 / 1024).toFixed(2)} MB
+              </span>
+              <button type="button" className="p-btn p-btn-sm p-btn-ghost" onClick={() => setArquivos([])}>
+                Limpar tudo
+              </button>
+            </li>
+          </ul>
+        )}
+
+        {temImagem && (
+          <div className="p-alert p-alert-info">
+            A I.A. vai ler os prints e transcrever a conversa antes de analisar. Mande os prints na ordem da conversa e
+            confira a transcrição no resultado, principalmente valores e datas.
+          </div>
+        )}
 
         <div className="p-form-grid">
           <div className="p-field">
@@ -102,7 +203,7 @@ export default function AnalisarForm({ iaDisponivel, envioJetimob, exemplo }: { 
           <div className="p-field">
             <label htmlFor="data_conversa">Data da conversa (para calcular &quot;sexta&quot;, &quot;amanhã&quot;...)</label>
             <input id="data_conversa" name="data_conversa" type="date" className="p-input" />
-            <span className="p-small p-muted">Se vazio, usamos a última data encontrada no texto ou hoje.</span>
+            <span className="p-small p-muted">Se vazio, usamos a última data encontrada no texto ou hoje. Em print, informe a data.</span>
           </div>
         </div>
 
@@ -110,7 +211,7 @@ export default function AnalisarForm({ iaDisponivel, envioJetimob, exemplo }: { 
 
         <div className="p-row p-between">
           <span className="p-small p-muted">A conversa e a análise ficam salvas no histórico do cliente. Dados pessoais: acesso só com login.</span>
-          <button type="submit" className="p-btn p-btn-primary" disabled={enviando || (!texto.trim() && !arquivo)}>
+          <button type="submit" className="p-btn p-btn-primary" disabled={enviando || (!texto.trim() && arquivos.length === 0)}>
             {enviando ? 'Analisando... isso pode levar até um minuto' : 'Analisar com I.A.'}
           </button>
         </div>

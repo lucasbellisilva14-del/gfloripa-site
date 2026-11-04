@@ -17,6 +17,7 @@
 // Opcionais:
 //   PORTA                 porta do endereço de saúde (padrão 8080)
 //   INTERVALO_ENVIO_MS    agrupamento de mensagens antes de enviar (padrão 3000)
+//   JANELA_DIAS           quantos dias para trás aceitar ao conectar (padrão 7)
 
 import { createServer } from 'node:http'
 import makeWASocket, {
@@ -29,11 +30,15 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys'
 import pino from 'pino'
 import QRCode from 'qrcode'
+import { JANELA_DIAS_PADRAO, prepararMensagem, tipoAceito } from './filtros.mjs'
 
 const PAINEL_URL = (process.env.PAINEL_URL ?? '').replace(/\/$/, '')
 const TOKEN = process.env.PAINEL_WHATSAPP_TOKEN ?? ''
 const PORTA = Number(process.env.PORTA ?? process.env.PORT ?? 8080)
 const INTERVALO_ENVIO_MS = Number(process.env.INTERVALO_ENVIO_MS ?? 3000)
+// quantos dias para tras aceitamos ao conectar, quando o WhatsApp entrega
+// de uma vez o que ficou acumulado
+const JANELA_DIAS = Number(process.env.JANELA_DIAS ?? JANELA_DIAS_PADRAO)
 
 if (!PAINEL_URL || !TOKEN) {
   console.error('Faltam PAINEL_URL e/ou PAINEL_WHATSAPP_TOKEN. Veja docs/painel/whatsapp.md.')
@@ -156,31 +161,6 @@ async function escoarFila() {
 
 setInterval(escoarFila, INTERVALO_ENVIO_MS)
 
-// --- extração do texto -----------------------------------------------------
-// Só interessa texto. Áudio, imagem e documento viram uma marcação curta para
-// a conversa não ficar com buracos sem explicação.
-
-function textoDaMensagem(m) {
-  const c = m.message
-  if (!c) return null
-  if (c.conversation) return c.conversation
-  if (c.extendedTextMessage?.text) return c.extendedTextMessage.text
-  if (c.imageMessage) return c.imageMessage.caption ? `[foto] ${c.imageMessage.caption}` : '[foto]'
-  if (c.videoMessage) return c.videoMessage.caption ? `[vídeo] ${c.videoMessage.caption}` : '[vídeo]'
-  if (c.audioMessage) return '[áudio]'
-  if (c.documentMessage) return `[documento${c.documentMessage.fileName ? ': ' + c.documentMessage.fileName : ''}]`
-  if (c.locationMessage) return '[localização]'
-  if (c.contactMessage) return '[contato]'
-  if (c.stickerMessage) return '[figurinha]'
-  if (c.reactionMessage) return null
-  return null
-}
-
-function ehConversaDePessoa(jid) {
-  if (!jid) return false
-  return jid.endsWith('@s.whatsapp.net') && !jid.includes('broadcast')
-}
-
 // --- conexão ---------------------------------------------------------------
 
 let socket = null
@@ -240,22 +220,26 @@ async function conectar() {
   })
 
   socket.ev.on('messages.upsert', ({ messages, type }) => {
-    if (type !== 'notify') return // 'append' é histórico antigo, não interessa
+    // 'notify' é a mensagem que chega ao vivo; 'append' é a que você enviou do
+    // celular ou a que ficou na fila enquanto o serviço estava fora do ar.
+    // Os dois contam: sem 'append' a ponte perde metade da conversa.
+    if (!tipoAceito(type)) return
+    let aceitas = 0
+    const recusas = {}
     for (const m of messages) {
-      const jid = m.key?.remoteJid
-      if (!ehConversaDePessoa(jid)) continue
-      const texto = textoDaMensagem(m)
-      if (!texto) continue
-      const carimbo = Number(m.messageTimestamp ?? 0)
-      fila.push({
-        wa_chat_id: jid,
-        wa_id: m.key.id,
-        direcao: m.key.fromMe ? 'saida' : 'entrada',
-        nome: m.pushName ?? null,
-        autor: m.key.fromMe ? null : (m.pushName ?? null),
-        texto,
-        data: new Date((carimbo ? carimbo : Date.now() / 1000) * 1000).toISOString(),
-      })
+      const r = prepararMensagem(m, { janelaDias: JANELA_DIAS })
+      if (r.recusa) {
+        recusas[r.recusa] = (recusas[r.recusa] ?? 0) + 1
+        continue
+      }
+      fila.push(r.mensagem)
+      aceitas++
+    }
+    if (aceitas || Object.keys(recusas).length) {
+      const detalhe = Object.entries(recusas)
+        .map(([motivo, n]) => `${n} ${motivo}`)
+        .join(', ')
+      diga(`lote ${type}: ${aceitas} aceita(s)${detalhe ? `, ignorada(s): ${detalhe}` : ''}`)
     }
     if (fila.length >= 50) escoarFila()
   })

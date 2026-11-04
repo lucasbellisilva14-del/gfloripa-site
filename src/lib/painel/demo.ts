@@ -30,6 +30,7 @@ export const CONVERSA_DEMO = `[24/10/2026 09:12] Mariana Costa: Bom dia Lucas! V
 [24/10/2026 10:05] Mariana Costa: Obrigada Lucas! Ah, uma amiga indicou outra imobiliária aqui também, mas a gente gostou mais do seu anúncio.`
 
 export const ANALISE_DEMO: AnaliseResultado = {
+  transcricao: null,
   resumo:
     'Mariana Costa, de Caxias do Sul, procura casa de 3 quartos na Gamboa para veranear agora e morar em cerca de 2 anos. Já vendeu o apartamento (R$ 600 mil de entrada) e tem pré-aprovação informal no Banrisul. Visita agendada para domingo, 1 de novembro, às 15h, para as casas C0412 e C0398. O marido Ricardo decide junto e considera o valor de R$ 1,39 milhão alto.',
   temperatura: {
