@@ -7,6 +7,7 @@ import { TemperaturaBadge, EstagioBadge, TipoBadge } from '@/components/painel/B
 import LembreteAcoes from '@/components/painel/LembreteAcoes'
 import NovoLembreteForm from '@/components/painel/NovoLembreteForm'
 import CopiarBotao from '@/components/painel/CopiarBotao'
+import ClienteEditar from '@/components/painel/ClienteEditar'
 import { classificarLembrete, formatarData, formatarDataCurta, iniciais } from '@/lib/painel/formato'
 import { ROTULO_TEMPERATURA } from '@/lib/painel/tipos'
 import { formatPrice } from '@/lib/jetimob'
@@ -49,6 +50,9 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           )}
           <Link href="/painel/analisar" className="p-btn p-btn-primary">Analisar nova conversa</Link>
         </div>
+      </div>
+      <div style={{ marginBottom: 16 }}>
+        <ClienteEditar cliente={cliente} />
       </div>
 
       <div className="p-grid p-grid-2" style={{ alignItems: 'start' }}>
