@@ -144,12 +144,31 @@ Redeploy na Vercel depois. O endereço de saúde do serviço (`/saude`) responde
 sem token e não expõe mensagem nenhuma, só status e contadores. O comando
 (`POST /comando`) exige o token.
 
+### Como a tela decide se o serviço está vivo
+
+Duas fontes: o sinal de vida que o serviço grava no banco a cada 30 segundos
+(pela fila, sempre funciona) e a resposta do endereço direto, quando
+configurado. **Qualquer uma das duas prova que está vivo.** Só é "Serviço
+fora do ar" quando nenhuma responde. Se o endereço direto falhar mas o pulso
+estiver recente, a tela mostra o estado real (inclusive o QR) e acusa o
+endereço direto como problema de configuração, sem bloquear nada.
+
+Enquanto a conexão não está estável, a tela consulta a cada 2 segundos; nos
+25 segundos seguintes a um botão, a cada segundo, com um contador visível. O
+serviço, por sua vez, consulta a fila a cada 1,5 segundo durante os dois
+minutos seguintes a qualquer comando ou mudança de conexão, e a cada 5 fora
+disso.
+
 ### A lista de verificações
 
-Abaixo do status aparecem cinco verificações, cada uma com o motivo:
+Abaixo do status aparecem as verificações, cada uma com o motivo:
 
-1. **Serviço no ar**: responde (direto) ou mandou sinal de vida nos últimos
-   95 segundos (ele avisa a cada 30).
+1. **Serviço no ar**: respondeu no endereço direto ou mandou sinal de vida
+   nos últimos 95 segundos (ele avisa a cada 30).
+1. **Endereço direto do serviço** (só aparece com `WHATSAPP_PONTE_URL`):
+   se responde. Quando falha com o serviço vivo pela outra via, o problema é
+   o domínio ou a porta configurados no Railway, e os botões seguem
+   funcionando pela fila.
 2. **Pareado com o WhatsApp**: há sessão aberta com o número.
 3. **Apontando para este painel**: o `PAINEL_URL` do serviço é o endereço da
    tela aberta. Se estiver mandando para um preview ou para o endereço errado,
@@ -216,8 +235,13 @@ uma vez por deploy.
 registros no Railway: a ponte imprime o motivo.
 
 **Status fica em Conectando e volta para Desconectado.** Normalmente é sessão
-inválida. Desconecte o aparelho pelo celular, em Aparelhos conectados, e
-pareie de novo.
+inválida. Use **Parear de novo** na tela, ou desconecte o aparelho pelo
+celular, em Aparelhos conectados.
+
+**Desconectei pelo celular e a tela não oferece o QR.** O serviço gera o QR
+sozinho em poucos segundos ao perceber a desconexão. Se a tela não mostrar,
+clique em **Parear de novo**; o contador abaixo do aviso acompanha a resposta.
+Se o aviso vermelho disser que o serviço não responde, aí é na hospedagem.
 
 **Conectou mas não chega mensagem.** Primeiro confira os registros do Railway:
 a cada lote a ponte escreve uma linha como `lote notify: 1 aceita(s)`, ou diz
