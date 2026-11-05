@@ -122,8 +122,9 @@ export interface PainelDb {
   criarAnalise(input: NovaAnalise): Promise<Analise>
   obterAnalise(id: string): Promise<Analise | null>
   listarAnalisesDoCliente(clienteId: string): Promise<Analise[]>
-  listarAnalisesRecentes(corretorId: number, limite: number): Promise<Analise[]>
-  contarAnalisesDesde(corretorId: number, desdeIso: string): Promise<number>
+  // corretorId null = equipe inteira (painel do gestor)
+  listarAnalisesRecentes(corretorId: number | null, limite: number): Promise<Analise[]>
+  contarAnalisesDesde(corretorId: number | null, desdeIso: string): Promise<number>
 
   criarLembrete(input: NovoLembrete): Promise<Lembrete>
   listarLembretes(filtro: FiltroLembretes): Promise<Lembrete[]>

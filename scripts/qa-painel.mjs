@@ -276,6 +276,39 @@ await p3.waitForURL('**/painel')
 ok(true, 'senha definida pelo gestor entra')
 await ctx3.close()
 
+// 9c. painel do gestor: visão da equipe, relatório e fichas dos outros em
+// modo de leitura; corretor comum não entra
+const ctx4 = await browser.newContext()
+const p4 = await ctx4.newPage()
+await p4.goto(`${BASE}/painel/login`)
+await p4.fill('#usuario', 'murilo')
+await p4.fill('#senha', 'murilo2026')
+await p4.click('button[type=submit]')
+await p4.waitForURL('**/painel')
+const rEquipe = await p4.goto(`${BASE}/painel/equipe`)
+ok(rEquipe?.status() === 404, `corretor comum não abre a Equipe (${rEquipe?.status()})`)
+const criado = await p4.request.post(`${BASE}/api/painel/clientes`, { data: { nome: 'Cliente do Murilo QA', telefone: '48 99999 0001', origem: 'QA' } })
+const corpoCriado = await criado.json()
+const clienteMurilo = corpoCriado.cliente ?? corpoCriado
+ok(criado.ok() && clienteMurilo?.id, 'Murilo cria um cliente próprio')
+await ctx4.close()
+
+await page.goto(`${BASE}/painel/equipe`)
+ok((await page.textContent('h1'))?.includes('Equipe'), 'gestor abre a Equipe')
+ok((await page.locator('[data-teste=equipe-corretores] tbody tr').count()) >= 5, 'tabela por corretor lista a equipe')
+ok((await page.locator('text=Cliente do Murilo QA').count()) > 0, 'cliente de outro corretor aparece na lista da equipe')
+await page.click('[data-teste=relatorio-equipe] button:has-text("Gerar relatório")')
+await page.waitForSelector('[data-teste=relatorio-resumo]', { timeout: 30000 })
+ok(true, 'relatório da equipe gerado')
+await page.screenshot({ path: `${OUT}/10-equipe.png`, fullPage: true })
+await page.goto(`${BASE}/painel/equipe?corretor=1001`)
+ok((await page.locator('text=Cliente do Murilo QA').count()) > 0, 'filtro por corretor mantém o cliente dele')
+await page.goto(`${BASE}/painel/clientes/${clienteMurilo.id}`)
+ok(await page.isVisible('[data-teste=somente-leitura]'), 'ficha de outro corretor abre em modo de leitura')
+ok((await page.locator('text=Analisar nova conversa').count()) === 0, 'sem ações de edição na ficha alheia')
+const pr = await page.request.patch(`${BASE}/api/painel/clientes/${clienteMurilo.id}`, { data: { nome: 'Tentativa' } })
+ok(pr.status() === 404 || pr.status() === 403, `API recusa o gestor editar a ficha alheia (${pr.status()})`)
+
 // 10. logout
 // volta ao início primeiro: na tela do WhatsApp a página fica longa depois da
 // análise e o botão da barra lateral nem sempre está ao alcance do clique

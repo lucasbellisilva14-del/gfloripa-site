@@ -21,6 +21,8 @@ type Props = {
   analise: Pick<Analise, 'id' | 'resultado' | 'modelo' | 'tokens_entrada' | 'tokens_saida' | 'custo_usd' | 'demo' | 'criado_em' | 'cliente_id'>
   clienteNome?: string | null
   envioJetimob?: boolean
+  // gestor vendo a análise de outro corretor: sem criar lembretes nem enviar
+  somenteLeitura?: boolean
   // lembretes já criados a partir desta análise (título + data) para não duplicar
   lembretesCriados?: { titulo: string; data: string }[]
 }
@@ -42,7 +44,7 @@ function fatosComoTexto(r: AnaliseResultado): string {
   return linhas.map(([k, v]) => `${k}: ${v}`).join('\n')
 }
 
-export default function AnaliseResultadoView({ analise, clienteNome, envioJetimob = false, lembretesCriados = [] }: Props) {
+export default function AnaliseResultadoView({ analise, clienteNome, envioJetimob = false, somenteLeitura = false, lembretesCriados = [] }: Props) {
   const r = analise.resultado
   const [criados, setCriados] = useState<Set<string>>(new Set(lembretesCriados.map((l) => `${l.titulo}|${l.data}`)))
   const [erro, setErro] = useState<string | null>(null)
@@ -237,7 +239,7 @@ export default function AnaliseResultadoView({ analise, clienteNome, envioJetimo
       <section className="p-card">
         <div className="p-card-head">
           <h3>Lembretes detectados</h3>
-          {r.lembretes.length > 0 && (
+          {r.lembretes.length > 0 && !somenteLeitura && (
             <button type="button" className="p-btn p-btn-sm" onClick={criarTodos} disabled={r.lembretes.every((l) => criados.has(`${l.titulo}|${l.data}`))}>
               Criar todos
             </button>
@@ -259,9 +261,11 @@ export default function AnaliseResultadoView({ analise, clienteNome, envioJetimo
                       {l.trecho ? ` · "${l.trecho}"` : ''}
                     </div>
                   </div>
-                  <button type="button" className={`p-btn p-btn-sm ${feito ? '' : 'p-btn-primary'}`} disabled={feito} onClick={() => criarLembrete(l)}>
-                    {feito ? 'Lembrete criado' : 'Criar lembrete'}
-                  </button>
+                  {!somenteLeitura && (
+                    <button type="button" className={`p-btn p-btn-sm ${feito ? '' : 'p-btn-primary'}`} disabled={feito} onClick={() => criarLembrete(l)}>
+                      {feito ? 'Lembrete criado' : 'Criar lembrete'}
+                    </button>
+                  )}
                 </li>
               )
             })}

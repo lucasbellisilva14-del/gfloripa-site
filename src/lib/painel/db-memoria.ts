@@ -189,12 +189,12 @@ export async function criarDbMemoria(): Promise<PainelDb> {
     },
     async listarAnalisesRecentes(corretorId, limite) {
       return estado.analises
-        .filter((a) => a.corretor_id === corretorId)
+        .filter((a) => !corretorId || a.corretor_id === corretorId)
         .sort((a, b) => b.criado_em.localeCompare(a.criado_em))
         .slice(0, limite)
     },
     async contarAnalisesDesde(corretorId, desdeIso) {
-      return estado.analises.filter((a) => a.corretor_id === corretorId && a.criado_em >= desdeIso).length
+      return estado.analises.filter((a) => (!corretorId || a.corretor_id === corretorId) && a.criado_em >= desdeIso).length
     },
 
     async criarLembrete(input) {

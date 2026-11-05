@@ -5,7 +5,9 @@ import Image from 'next/image'
 import { usePathname, useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
 import type { CorretorLogado } from '@/lib/painel/tipos'
-import { IconeAnalisar, IconeClientes, IconeConfig, IconeImoveis, IconeInicio, IconeLembretes, IconeWhatsapp } from './Icones'
+import { IconeAnalisar, IconeClientes, IconeConfig, IconeEquipe, IconeImoveis, IconeInicio, IconeLembretes, IconeWhatsapp } from './Icones'
+
+const LINK_EQUIPE = { href: '/painel/equipe', rotulo: 'Equipe', Icone: IconeEquipe }
 
 const LINKS = [
   { href: '/painel', rotulo: 'Início', Icone: IconeInicio },
@@ -58,7 +60,9 @@ export default function PainelNav({ corretor, modoDados, demoIa }: { corretor: C
 
   const ativo = (href: string) => (href === '/painel' ? pathname === '/painel' : pathname.startsWith(href))
 
-  const itens = LINKS.map(({ href, rotulo, Icone }) => (
+  // o gestor ganha a visão da equipe logo depois do início
+  const links = corretor.papel === 'gestor' ? [LINKS[0], LINK_EQUIPE, ...LINKS.slice(1)] : LINKS
+  const itens = links.map(({ href, rotulo, Icone }) => (
     <Link key={href} href={href} aria-current={ativo(href) ? 'page' : undefined} onClick={() => setAberto(false)}>
       <Icone /> {rotulo}
     </Link>

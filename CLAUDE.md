@@ -42,7 +42,9 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
   src/lib/painel, src/components/painel. Protegida por src/proxy.ts (cookie
   assinado). Login por usuário e senha (tabela corretores, hash PBKDF2,
   papéis gestor/corretor, Equipe em Configurações); PAINEL_SENHA segue como
-  senha mestra do gestor padrão. Documentação completa em docs/painel/README.md;
+  senha mestra do gestor padrão. Painel do gestor em /painel/equipe (somente
+  leitura: números por corretor, funil, relatório da equipe pela I.A.).
+  Documentação completa em docs/painel/README.md;
   padrão de atendimento que treina a I.A. em src/painel/padrao-atendimento.md.
 - Sem PAINEL_SENHA, SUPABASE_* e ANTHROPIC_API_KEY roda em modo demo (senha
   "demo", dados de exemplo, análise fixa). Nunca pode quebrar o site público.
