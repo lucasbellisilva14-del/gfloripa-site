@@ -177,14 +177,16 @@ export function criarDbSupabase(): PainelDb {
       return linhas.map(paraAnalise)
     },
     async listarAnalisesRecentes(corretorId, limite) {
+      const filtro = corretorId ? `&corretor_id=eq.${q(corretorId)}` : ''
       const linhas = await rest<Linha[]>('analises', {
-        query: `select=*&corretor_id=eq.${q(corretorId)}&order=criado_em.desc&limit=${q(limite)}`,
+        query: `select=*${filtro}&order=criado_em.desc&limit=${q(limite)}`,
       })
       return linhas.map(paraAnalise)
     },
     async contarAnalisesDesde(corretorId, desdeIso) {
+      const filtro = corretorId ? `&corretor_id=eq.${q(corretorId)}` : ''
       const linhas = await rest<{ id: string }[]>('analises', {
-        query: `select=id&corretor_id=eq.${q(corretorId)}&criado_em=gte.${q(desdeIso)}`,
+        query: `select=id${filtro}&criado_em=gte.${q(desdeIso)}`,
       })
       return linhas.length
     },

@@ -11,11 +11,13 @@ export default async function AnalisePage({ params }: { params: Promise<{ id: st
   const corretor = (await getCorretorLogado())!
   const db = await getDb()
   const analise = await db.obterAnalise(id)
-  if (!analise || analise.corretor_id !== corretor.id) notFound()
+  const gestor = corretor.papel === 'gestor'
+  if (!analise || (analise.corretor_id !== corretor.id && !gestor)) notFound()
+  const somenteLeitura = analise.corretor_id !== corretor.id
   const [cliente, conversa, lembretes] = await Promise.all([
     db.obterCliente(analise.cliente_id),
     db.obterConversa(analise.conversa_id),
-    db.listarLembretes({ corretor_id: corretor.id, cliente_id: analise.cliente_id }),
+    db.listarLembretes({ corretor_id: analise.corretor_id, cliente_id: analise.cliente_id }),
   ])
   return (
     <>
@@ -26,9 +28,11 @@ export default async function AnalisePage({ params }: { params: Promise<{ id: st
         </div>
         <Link href={`/painel/clientes/${analise.cliente_id}`} className="p-btn">Ver cliente</Link>
       </div>
+      {somenteLeitura && <div className="p-alert p-alert-info" style={{ marginBottom: 16 }} data-teste="somente-leitura">Análise de outro corretor. Somente visualização.</div>}
       <AnaliseResultadoView
         analise={analise}
-        envioJetimob={envioJetimobHabilitado()}
+        somenteLeitura={somenteLeitura}
+        envioJetimob={envioJetimobHabilitado() && !somenteLeitura}
         lembretesCriados={lembretes.filter((l) => l.analise_id === analise.id).map((l) => ({ titulo: l.titulo, data: l.data }))}
       />
       {conversa && (

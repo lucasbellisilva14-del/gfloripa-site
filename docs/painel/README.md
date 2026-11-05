@@ -18,6 +18,7 @@ Funciona em três situações, sem quebrar o site público em nenhuma delas:
 
 | Rota | O que mostra | Captura |
 | --- | --- | --- |
+| `/painel/equipe` | Painel do gestor (só papel gestor): números por corretor, funil, pontos fortes e lacunas recorrentes, alertas, todos os atendimentos e clientes, relatório da equipe pela I.A. Somente leitura. | `capturas/13-equipe.png` |
 | `/painel/login` | Usuário e senha por corretor (tabela `corretores`), cookie de sessão assinado (14 dias). Sem usuário, a senha mestra `PAINEL_SENHA` entra como gestor. | `capturas/01-login.png` |
 | `/painel` | Dashboard: leads por temperatura, lembretes de hoje e atrasados, análises na semana, clientes ordenados por temperatura, últimas análises. | `capturas/02-dashboard.png`, `08-dashboard-escuro.png` |
 | `/painel/whatsapp` | Ponte com o WhatsApp: código QR, status da conexão e conversas capturadas, com botão para analisar cada uma. Somente leitura, nunca envia. Ver `whatsapp.md`. | `capturas/10-whatsapp.png`, `11-whatsapp-analise.png` |
@@ -210,6 +211,28 @@ Primeiro acesso da equipe: o gestor entra com a senha mestra, abre
 Configurações > Equipe e clica em "Definir senha" para cada um (ou deixa em
 branco para gerar uma temporária), e passa a senha por um canal seguro.
 
+## Painel do gestor (/painel/equipe)
+
+Só quem tem papel `gestor` vê o item Equipe no menu. Tudo é somente leitura:
+o gestor abre a ficha e as análises de qualquer corretor (com aviso de
+visualização), mas quem edita, cria lembretes e analisa é o corretor
+responsável; a API recusa qualquer escrita do gestor em dados alheios.
+
+- **Números** (`lib/painel/equipe.ts`): por corretor e da equipe, calculados
+  dos dados do painel: clientes, quentes, quentes parados (sem contato há
+  mais de 3 dias), análises na semana e em 30 dias, nota média do atendimento
+  (campo `qualidade_atendimento` que a I.A. já dá em cada análise), lembretes
+  atrasados, última atividade, funil por estágio, pontos fortes e "faltou
+  perguntar" mais repetidos, e alertas.
+- **Relatório pela I.A.** (`lib/painel/relatorio-equipe.ts`): o gestor clica em
+  Gerar relatório; a I.A. recebe os números e até 8 análises recentes de cada
+  corretor e devolve, em JSON validado: resumo, nota da equipe, pontos fortes,
+  pontos fracos, o que falta, prioridades, parecer por corretor e clientes em
+  risco. Fica guardado em `config` (chave `relatorio_equipe`) até gerar outro.
+  Sem `ANTHROPIC_API_KEY`, monta uma versão só com os números.
+- **Filtro** `?corretor=<id>` restringe listas, pontos fortes e lacunas a um
+  corretor.
+
 ## Padrão de atendimento
 
 `src/painel/padrao-atendimento.md` é a v0, escrita para imobiliária de praia
@@ -236,9 +259,9 @@ valer na hora; a versão definitiva deve voltar para o arquivo (versionado).
 - **Jetimob**: quando a Jetimob liberar o MCP ou endpoints de escrita, ligar
   `jetimob-escrita.ts` para anotar histórico, criar tarefa e atualizar o
   funil direto no CRM (hoje só criação de lead, atrás de flag).
-- **Painel do gestor**: visão de todos os corretores (hoje cada um vê só a
-  própria carteira, inclusive o gestor), qualidade média do atendimento,
-  funil consolidado.
+- **Painel do gestor, fase 2**: metas por corretor, comparação entre
+  períodos, edição das fichas alheias (hoje só leitura) e relatório agendado
+  por e-mail.
 - **WhatsApp por corretor**: uma ponte por número, cada uma com o token do
   seu corretor.
 - **Produto (ONOS)**: tenant por imobiliária, padrão de atendimento por

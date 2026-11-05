@@ -17,13 +17,17 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
   const corretor = (await getCorretorLogado())!
   const db = await getDb()
   const cliente = await db.obterCliente(id)
-  if (!cliente || cliente.corretor_id !== corretor.id) notFound()
+  // o gestor abre a ficha de qualquer corretor, mas só para ver
+  const gestor = corretor.papel === 'gestor'
+  if (!cliente || (cliente.corretor_id !== corretor.id && !gestor)) notFound()
+  const somenteLeitura = cliente.corretor_id !== corretor.id
 
-  const [conversas, analises, lembretes, interesses] = await Promise.all([
+  const [conversas, analises, lembretes, interesses, dono] = await Promise.all([
     db.listarConversasDoCliente(id),
     db.listarAnalisesDoCliente(id),
-    db.listarLembretes({ corretor_id: corretor.id, cliente_id: id }),
+    db.listarLembretes({ corretor_id: cliente.corretor_id, cliente_id: id }),
     db.listarImoveisInteresse(id),
+    somenteLeitura ? db.obterCorretor(cliente.corretor_id).catch(() => null) : Promise.resolve(null),
   ])
   const imoveis = await imoveisPorCodigos(interesses.map((i) => i.codigo_imovel))
   const ultima = analises[0]?.resultado ?? null
@@ -45,15 +49,21 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
           </div>
         </div>
         <div className="p-row">
-          {cliente.telefone && (
+          {cliente.telefone && !somenteLeitura && (
             <a className="p-btn" href={`https://wa.me/55${cliente.telefone.replace(/\D/g, '').replace(/^55/, '')}`} target="_blank" rel="noopener noreferrer">WhatsApp</a>
           )}
-          <Link href="/painel/analisar" className="p-btn p-btn-primary">Analisar nova conversa</Link>
+          {somenteLeitura ? <Link href="/painel/equipe" className="p-btn">Voltar à equipe</Link> : <Link href="/painel/analisar" className="p-btn p-btn-primary">Analisar nova conversa</Link>}
         </div>
       </div>
-      <div style={{ marginBottom: 16 }}>
-        <ClienteEditar cliente={cliente} />
-      </div>
+      {somenteLeitura ? (
+        <div className="p-alert p-alert-info" style={{ marginBottom: 16 }} data-teste="somente-leitura">
+          Ficha de <strong>{dono?.nome ?? `corretor #${cliente.corretor_id}`}</strong>. Somente visualização: quem edita, cria lembretes e analisa é o corretor responsável.
+        </div>
+      ) : (
+        <div style={{ marginBottom: 16 }}>
+          <ClienteEditar cliente={cliente} />
+        </div>
+      )}
 
       <div className="p-grid p-grid-2" style={{ alignItems: 'start' }}>
         <div style={{ display: 'grid', gap: 16 }}>
@@ -141,8 +151,12 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
         <div style={{ display: 'grid', gap: 16 }}>
           <section className="p-card">
             <div className="p-card-head"><h2>Lembretes</h2></div>
-            <NovoLembreteForm clientes={[]} clienteId={id} />
-            <hr className="p-divider" />
+            {!somenteLeitura && (
+              <>
+                <NovoLembreteForm clientes={[]} clienteId={id} />
+                <hr className="p-divider" />
+              </>
+            )}
             {lembretes.length === 0 ? (
               <p className="p-muted">Nenhum lembrete.</p>
             ) : (
@@ -158,7 +172,7 @@ export default async function ClientePage({ params }: { params: Promise<{ id: st
                         </div>
                         {l.descricao && <div className="p-small p-muted">{l.descricao}</div>}
                       </div>
-                      <LembreteAcoes id={l.id} status={l.status} />
+                      {!somenteLeitura && <LembreteAcoes id={l.id} status={l.status} />}
                     </li>
                   )
                 })}
