@@ -4,9 +4,29 @@ import { getDb } from '@/lib/painel/db'
 import { tokenConfigurado } from '@/lib/painel/whatsapp-token'
 import { urlPonte } from '@/lib/painel/whatsapp-ponte'
 import { envioJetimobHabilitado } from '@/lib/painel/jetimob-escrita'
+import { corretorPadrao } from '@/lib/painel/auth'
 
 export default async function WhatsappPage() {
   const corretor = (await getCorretorLogado())!
+  const dono = corretorPadrao()
+  // A ponte conecta um número só, o do gestor padrão. Os demais veem o aviso.
+  if (corretor.id !== dono.id) {
+    return (
+      <>
+        <div className="p-head">
+          <div>
+            <h1>WhatsApp</h1>
+            <p>Captura automática das conversas do WhatsApp.</p>
+          </div>
+        </div>
+        <section className="p-card">
+          <div className="p-alert p-alert-info" data-teste="whatsapp-outro-corretor">
+            O WhatsApp conectado ao painel é o número de <strong>{dono.nome}</strong>. A conexão é por número, e hoje há uma só. Enquanto isso, use <strong>Analisar conversa</strong> com a exportação ou prints das suas conversas: o resultado entra na sua carteira normalmente.
+          </div>
+        </section>
+      </>
+    )
+  }
   const db = await getDb()
   const [estado, chats, clientes] = await Promise.all([
     db.obterEstadoWhatsapp(corretor.id),

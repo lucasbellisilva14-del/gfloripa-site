@@ -2,21 +2,41 @@
 // pelo id do corretor; sem chave (ou em caso de erro), usa os imóveis de
 // demonstração para o painel continuar funcionando.
 
-import { getAllProperties, getProperty, type Property } from '@/lib/jetimob'
+import { getAllProperties, getCorretores, getProperty, type Property } from '@/lib/jetimob'
 import { IMOVEIS_DEMO } from './demo'
+import type { CorretorLogado } from './tipos'
 
 export function jetimobConfigurado(): boolean {
   return Boolean(process.env.JETIMOB_API_URL && process.env.JETIMOB_API_KEY)
 }
 
-export async function imoveisDoCorretor(corretorId: number): Promise<{ imoveis: Property[]; demo: boolean }> {
-  if (!jetimobConfigurado()) return { imoveis: IMOVEIS_DEMO, demo: true }
+const simples = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase().split(/\s+/)[0] ?? ''
+
+// Id do corretor no Jetimob: o ligado pelo gestor (jetimob_id); senão, tenta
+// casar pelo primeiro nome na lista de corretores da API; senão, o próprio id.
+export async function jetimobIdDoCorretor(corretor: CorretorLogado): Promise<number> {
+  if (corretor.jetimob_id) return corretor.jetimob_id
+  if (!jetimobConfigurado()) return corretor.id
   try {
+    const lista = await getCorretores()
+    const alvo = simples(corretor.nome)
+    const iguais = lista.filter((c) => simples(c.nome ?? '') === alvo)
+    if (iguais.length === 1) return iguais[0].id
+  } catch {
+    // sem lista: segue com o id interno
+  }
+  return corretor.id
+}
+
+export async function imoveisDoCorretor(corretor: CorretorLogado): Promise<{ imoveis: Property[]; demo: boolean; jetimobId: number }> {
+  if (!jetimobConfigurado()) return { imoveis: IMOVEIS_DEMO, demo: true, jetimobId: corretor.id }
+  try {
+    const jetimobId = await jetimobIdDoCorretor(corretor)
     const todos = await getAllProperties()
-    return { imoveis: todos.filter((p) => p.id_corretor === corretorId), demo: false }
+    return { imoveis: todos.filter((p) => p.id_corretor === jetimobId), demo: false, jetimobId }
   } catch (err) {
     console.error('Painel: erro ao buscar imóveis na Jetimob:', err)
-    return { imoveis: IMOVEIS_DEMO, demo: true }
+    return { imoveis: IMOVEIS_DEMO, demo: true, jetimobId: corretor.id }
   }
 }
 

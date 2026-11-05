@@ -17,12 +17,15 @@ import type {
   ComandoWhatsapp,
   DiagnosticoWhatsapp,
   Conversa,
+  Corretor,
   CorretorLogado,
   EstadoWhatsapp,
   ImovelInteresse,
   Lembrete,
   MensagemRecebida,
   MensagemWhatsapp,
+  NovoCorretor,
+  PatchCorretor,
   StatusLembrete,
   StatusWhatsapp,
   Temperatura,
@@ -96,6 +99,14 @@ export type FiltroLembretes = {
 
 export interface PainelDb {
   readonly modo: 'supabase' | 'memoria'
+
+  // --- equipe (login individual) ---
+  listarCorretores(): Promise<Corretor[]>
+  obterCorretor(id: number): Promise<Corretor | null>
+  // Única leitura que devolve o hash: só para conferir o login.
+  obterCorretorPorUsuario(usuario: string): Promise<(Corretor & { senha_hash: string | null }) | null>
+  criarCorretor(input: NovoCorretor): Promise<Corretor>
+  atualizarCorretor(id: number, patch: PatchCorretor): Promise<Corretor | null>
 
   listarClientes(corretorId?: number): Promise<Cliente[]>
   obterCliente(id: string): Promise<Cliente | null>

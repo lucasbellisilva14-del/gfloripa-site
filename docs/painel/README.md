@@ -18,7 +18,7 @@ Funciona em três situações, sem quebrar o site público em nenhuma delas:
 
 | Rota | O que mostra | Captura |
 | --- | --- | --- |
-| `/painel/login` | Senha única, cookie de sessão assinado (14 dias). | `capturas/01-login.png` |
+| `/painel/login` | Usuário e senha por corretor (tabela `corretores`), cookie de sessão assinado (14 dias). Sem usuário, a senha mestra `PAINEL_SENHA` entra como gestor. | `capturas/01-login.png` |
 | `/painel` | Dashboard: leads por temperatura, lembretes de hoje e atrasados, análises na semana, clientes ordenados por temperatura, últimas análises. | `capturas/02-dashboard.png`, `08-dashboard-escuro.png` |
 | `/painel/whatsapp` | Ponte com o WhatsApp: código QR, status da conexão e conversas capturadas, com botão para analisar cada uma. Somente leitura, nunca envia. Ver `whatsapp.md`. | `capturas/10-whatsapp.png`, `11-whatsapp-analise.png` |
 | `/painel/analisar` | Formulário com texto colado e/ou até 10 arquivos (prints PNG e JPG, .txt do WhatsApp, .zip da exportação com mídia, .pdf, .md, .docx; 4 MB no total), mais nome, telefone, código do imóvel, tipo e data. Aceita arrastar e colar com Ctrl+V. Resultado em cards com botão copiar e "criar lembrete". | `capturas/03-analise.png`, `12-analisar-arquivos.png` |
@@ -100,10 +100,11 @@ Decisões:
   ainda passa por `validarAnalise()` (limites de nota, datas, coerência
   nível x nota). O padrão de atendimento vai no `system` com
   `cache_control` para baratear chamadas repetidas.
-- **Corretor logado**: o cookie carrega `{ id, nome, email }`, onde `id` é o
-  id do corretor no Jetimob (Lucas = 77723). Todas as tabelas têm
-  `corretor_id`, então multiusuário é trocar o login por uma tabela de
-  corretores (fase 2) sem migrar dados.
+- **Corretor logado**: o cookie carrega `{ id, nome, email, usuario, papel,
+  jetimob_id }`. O `id` é o mesmo gravado em `corretor_id` nas tabelas: para
+  o gestor padrão é o id do Jetimob (Lucas = 77723); os demais têm id interno
+  (1001 em diante) e ligam ao Jetimob por `jetimob_id`. Cada corretor vê só o
+  que tem o seu `corretor_id`. Ver "Equipe e logins" abaixo.
 - **Banco em memória** vive em `globalThis` para API e páginas compartilharem
   o mesmo estado no mesmo processo. Na Vercel o disco é somente leitura e
   cada instância é isolada: em produção use o Supabase.
@@ -117,10 +118,11 @@ Environment Variables (variável nova exige Redeploy).
 
 | Variável | Obrigatória | Descrição |
 | --- | --- | --- |
-| `PAINEL_SENHA` | sim em produção | Senha única do painel. Sem ela, em produção o login fica desabilitado; em dev (ou com `PAINEL_DEMO=1`) a senha `demo` entra. |
+| `PAINEL_SENHA` | sim em produção | Senha mestra do gestor padrão (entra sem usuário, ou com o usuário dele). Sem ela, em produção o login fica desabilitado; em dev (ou com `PAINEL_DEMO=1`) a senha `demo` entra para qualquer corretor sem senha definida. |
 | `PAINEL_SESSION_SECRET` | sim em produção | Segredo do HMAC do cookie. Gere com `openssl rand -hex 32`. |
 | `PAINEL_CORRETOR_ID` | não (padrão 77723) | Id do corretor logado no Jetimob. |
 | `PAINEL_CORRETOR_NOME` | não (padrão Lucas) | Nome exibido no painel. |
+| `PAINEL_CORRETOR_USUARIO` | não (padrão `lucas`) | Usuário do gestor padrão na tela de login. |
 | `PAINEL_CORRETOR_EMAIL` | não | E-mail do corretor no Jetimob (usado como `responsible` no envio de leads). |
 | `SUPABASE_URL` | não | URL do projeto Supabase (`https://xxxx.supabase.co`). |
 | `SUPABASE_SERVICE_ROLE_KEY` | não | Service role key (só servidor). Sem as duas, modo memória. |
@@ -160,8 +162,9 @@ node scripts/qa-whatsapp.mjs # ponte do WhatsApp; precisa de PAINEL_WHATSAPP_TOK
 ## Aplicar as migrations no Supabase
 
 1. Crie um projeto em https://supabase.com (ou use o existente).
-2. SQL Editor > New query > cole `supabase/migrations/20261029120000_painel_inicial.sql` > Run.
-   Com a CLI: `supabase link --project-ref <ref>` e `supabase db push`.
+2. SQL Editor > New query > cole cada arquivo de `supabase/migrations/` em
+   ordem de data > Run (todos são idempotentes). Com a CLI:
+   `supabase link --project-ref <ref>` e `supabase db push`.
 3. Settings > API: copie a URL do projeto e a service role key para
    `SUPABASE_URL` e `SUPABASE_SERVICE_ROLE_KEY`.
 4. Redeploy na Vercel. Em `/painel/configuracoes` a linha "Banco" deve
@@ -180,6 +183,32 @@ Clientes, telefones, e-mails e conversas são dados pessoais. No painel:
   chave fica no servidor. Vale citar a finalidade na política de privacidade
   (pendência já conhecida do site).
 - Rotas do painel têm `robots: noindex`.
+
+## Equipe e logins
+
+Cada corretor tem usuário e senha próprios (migration
+`20261106120000_painel_corretores.sql`, que já cria `lucas`, `murilo`,
+`edmilson`, `marcia` e `juliana`). As senhas ficam só como hash PBKDF2
+(`lib/painel/senha.ts`); ninguém vê a senha de ninguém.
+
+- **Gestor** (papel `gestor`): em Configurações > Equipe cria corretores,
+  define ou gera senha temporária, ativa/desativa, muda o papel e liga cada
+  um ao corretor do Jetimob (para "Meus imóveis"). Não consegue desativar a
+  própria conta nem deixar de ser gestor por ela.
+- **Corretor**: vê só os próprios clientes, análises e lembretes; troca a
+  própria senha em Configurações.
+- **Senha mestra**: `PAINEL_SENHA` continua entrando como gestor padrão, com
+  ou sem usuário. Assim ninguém fica trancado para fora, mesmo antes de
+  aplicar a migration.
+- **Sem senha definida** o corretor não entra em produção (a tela diz para
+  pedir ao gestor). Em modo demo, qualquer um da equipe entra com `demo`.
+- **Desativar** bloqueia o login em até um minuto (cache) e mantém os dados.
+- **WhatsApp**: a ponte conecta um número só, o do gestor padrão. Os outros
+  corretores veem um aviso na tela e seguem pela análise manual.
+
+Primeiro acesso da equipe: o gestor entra com a senha mestra, abre
+Configurações > Equipe e clica em "Definir senha" para cada um (ou deixa em
+branco para gerar uma temporária), e passa a senha por um canal seguro.
 
 ## Padrão de atendimento
 
@@ -207,9 +236,10 @@ valer na hora; a versão definitiva deve voltar para o arquivo (versionado).
 - **Jetimob**: quando a Jetimob liberar o MCP ou endpoints de escrita, ligar
   `jetimob-escrita.ts` para anotar histórico, criar tarefa e atualizar o
   funil direto no CRM (hoje só criação de lead, atrás de flag).
-- **Multiusuário**: tabela `corretores` (nome, e-mail, id Jetimob, senha
-  hash), login por usuário, filtro por `corretor_id` já existente.
-- **Painel do gestor**: visão de todos os corretores, qualidade média do
-  atendimento, funil consolidado.
+- **Painel do gestor**: visão de todos os corretores (hoje cada um vê só a
+  própria carteira, inclusive o gestor), qualidade média do atendimento,
+  funil consolidado.
+- **WhatsApp por corretor**: uma ponte por número, cada uma com o token do
+  seu corretor.
 - **Produto (ONOS)**: tenant por imobiliária, padrão de atendimento por
   tenant, cobrança por análise.
