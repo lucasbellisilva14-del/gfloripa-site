@@ -68,7 +68,7 @@ export default function PainelNav({ corretor, modoDados, demoIa }: { corretor: C
     <div className="p-side-foot">
       <div>
         <strong>{corretor.nome}</strong>
-        <div>Corretor Jetimob #{corretor.id}</div>
+        <div>{corretor.papel === 'gestor' ? 'Gestor' : 'Corretor'}{corretor.usuario ? ` · @${corretor.usuario}` : ` · #${corretor.id}`}</div>
       </div>
       <div className="p-row" style={{ gap: 6 }}>
         <span className="p-badge p-badge-demo">{modoDados === 'supabase' ? 'Supabase' : 'Dados demo'}</span>

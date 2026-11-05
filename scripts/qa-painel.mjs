@@ -237,6 +237,45 @@ if (respEstado.ok) {
   ok(true, 'tela do WhatsApp pulada (PAINEL_WHATSAPP_TOKEN nao configurado)')
 }
 
+// 9b. login individual: outro corretor não vê os dados do gestor nem a equipe;
+// o gestor define a senha dele e ela passa a valer
+const ctx2 = await browser.newContext()
+const p2 = await ctx2.newPage()
+await p2.goto(`${BASE}/painel/login`)
+await p2.fill('#usuario', 'murilo')
+await p2.fill('#senha', 'demo')
+await p2.click('button[type=submit]')
+await p2.waitForURL('**/painel')
+ok((await p2.textContent('h1'))?.includes('Murilo'), 'login individual entra como Murilo')
+const r404 = await p2.goto(`${BASE}/painel/clientes/demo-cli-mariana`)
+ok(r404?.status() === 404, `cliente do gestor não abre para outro corretor (${r404?.status()})`)
+await p2.goto(`${BASE}/painel/configuracoes`)
+ok((await p2.locator('[data-teste=equipe]').count()) === 0, 'corretor comum não vê a Equipe')
+await p2.goto(`${BASE}/painel/whatsapp`)
+ok(await p2.isVisible('[data-teste=whatsapp-outro-corretor]'), 'WhatsApp avisa que a conexão é do gestor')
+await ctx2.close()
+
+await page.goto(`${BASE}/painel/configuracoes`)
+ok((await page.locator('[data-teste=equipe] li').count()) === 5, 'gestor vê os cinco corretores')
+page.removeAllListeners('dialog') // o handler genérico da tela do WhatsApp aceitaria sem texto
+page.once('dialog', (d) => d.accept('murilo2026'))
+await page.click('[data-teste=equipe] li:has-text("@murilo") button:has-text("Definir senha")')
+await page.waitForSelector('[data-teste=senha-gerada]')
+ok(true, 'gestor define a senha de um corretor')
+const ctx3 = await browser.newContext()
+const p3 = await ctx3.newPage()
+await p3.goto(`${BASE}/painel/login`)
+await p3.fill('#usuario', 'murilo')
+await p3.fill('#senha', 'demo')
+await p3.click('button[type=submit]')
+await p3.waitForSelector('.p-alert-danger')
+ok(true, 'senha antiga "demo" deixa de valer depois de definida')
+await p3.fill('#senha', 'murilo2026')
+await p3.click('button[type=submit]')
+await p3.waitForURL('**/painel')
+ok(true, 'senha definida pelo gestor entra')
+await ctx3.close()
+
 // 10. logout
 // volta ao início primeiro: na tela do WhatsApp a página fica longa depois da
 // análise e o botão da barra lateral nem sempre está ao alcance do clique

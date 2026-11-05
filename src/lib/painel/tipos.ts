@@ -52,14 +52,54 @@ export const ROTULO_TIPO_CLIENTE: Record<TipoCliente, string> = {
   indefinido: 'Não informado',
 }
 
-// Corretor autenticado no painel. Hoje há um único corretor (senha única),
-// mas o modelo já separa identidade do site (nome) do id no CRM Jetimob
-// para evoluir para multiusuário sem mexer nas tabelas.
+export type PapelCorretor = 'gestor' | 'corretor'
+
+// Corretor autenticado no painel (conteúdo do cookie de sessão). O id é o
+// mesmo gravado em corretor_id nas tabelas: para o gestor padrão é o id do
+// Jetimob (Lucas = 77723); os demais têm id interno e ligam ao Jetimob por
+// jetimob_id.
 export type CorretorLogado = {
-  id: number // id do corretor no Jetimob (ex.: Lucas = 77723)
+  id: number
   nome: string
   email?: string | null
+  usuario?: string
+  papel?: PapelCorretor
+  jetimob_id?: number | null
 }
+
+// Linha da tabela corretores, sem o hash da senha (que nunca sai da camada
+// de dados a não ser para conferir o login).
+export type Corretor = {
+  id: number
+  usuario: string
+  nome: string
+  email: string | null
+  papel: PapelCorretor
+  jetimob_id: number | null
+  ativo: boolean
+  tem_senha: boolean
+  criado_em: string
+  atualizado_em: string
+}
+
+export type NovoCorretor = {
+  id?: number
+  usuario: string
+  nome: string
+  email?: string | null
+  papel?: PapelCorretor
+  jetimob_id?: number | null
+  senha_hash: string | null
+}
+
+export type PatchCorretor = Partial<{
+  nome: string
+  email: string | null
+  papel: PapelCorretor
+  jetimob_id: number | null
+  ativo: boolean
+  senha_hash: string | null
+}>
 
 export type Cliente = {
   id: string

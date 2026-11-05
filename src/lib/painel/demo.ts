@@ -2,10 +2,24 @@
 // Supabase) e pela análise em modo demo (sem ANTHROPIC_API_KEY). Todos os
 // nomes, telefones e conversas são fictícios.
 
-import type { Analise, AnaliseResultado, Cliente, Conversa, ImovelInteresse, Lembrete } from './tipos'
+import type { Analise, AnaliseResultado, Cliente, Conversa, Corretor, ImovelInteresse, Lembrete } from './tipos'
 import type { Property } from '@/lib/jetimob'
 
 export const CORRETOR_DEMO_ID = 77723
+
+// Equipe inicial (mesma da migration 20261106 do Supabase). Sem senha
+// definida: em modo demo entram com "demo"; em produção o gestor define.
+export function corretoresDemo(): (Corretor & { senha_hash: string | null })[] {
+  const agora = new Date().toISOString()
+  const base = { email: null, ativo: true, tem_senha: false, senha_hash: null, criado_em: agora, atualizado_em: agora } as const
+  return [
+    { id: CORRETOR_DEMO_ID, usuario: 'lucas', nome: 'Lucas', papel: 'gestor', jetimob_id: CORRETOR_DEMO_ID, ...base },
+    { id: 1001, usuario: 'murilo', nome: 'Murilo', papel: 'corretor', jetimob_id: null, ...base },
+    { id: 1002, usuario: 'edmilson', nome: 'Edmilson', papel: 'corretor', jetimob_id: null, ...base },
+    { id: 1003, usuario: 'marcia', nome: 'Marcia', papel: 'corretor', jetimob_id: null, ...base },
+    { id: 1004, usuario: 'juliana', nome: 'Juliana', papel: 'corretor', jetimob_id: null, ...base },
+  ]
+}
 
 const diasAtras = (n: number, hora = 10) => {
   const d = new Date()

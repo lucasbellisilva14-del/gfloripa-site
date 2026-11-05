@@ -7,10 +7,13 @@ import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { PainelDb, PatchEstadoWhatsapp } from './db'
 import { agoraIso, novoId, normalizarTelefone, ordenarClientes } from './db'
-import type { Analise, ChatWhatsapp, Cliente, Conversa, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemWhatsapp } from './tipos'
-import { dadosDemo } from './demo'
+import type { Analise, ChatWhatsapp, Cliente, Conversa, Corretor, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemWhatsapp } from './tipos'
+import { corretoresDemo, dadosDemo } from './demo'
+
+type CorretorLinha = Corretor & { senha_hash: string | null }
 
 type Estado = {
+  corretores?: CorretorLinha[]
   clientes: Cliente[]
   conversas: Conversa[]
   analises: Analise[]
@@ -45,12 +48,61 @@ async function salvar(estado: Estado): Promise<void> {
   }
 }
 
+// A lista pública nunca carrega o hash; só diz se há senha.
+function semHash(l: CorretorLinha): Corretor {
+  const { senha_hash, ...resto } = l
+  return { ...resto, tem_senha: Boolean(senha_hash) }
+}
+
 export async function criarDbMemoria(): Promise<PainelDb> {
   const estado = await carregar()
+  // arquivo de antes do login individual: ganha a equipe inicial
+  if (!estado.corretores?.length) estado.corretores = corretoresDemo()
   const persistir = () => salvar(estado)
 
   const db: PainelDb = {
     modo: 'memoria',
+
+    async listarCorretores() {
+      return (estado.corretores ?? []).map(semHash).sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'))
+    },
+    async obterCorretor(id) {
+      const l = (estado.corretores ?? []).find((c) => c.id === id)
+      return l ? semHash(l) : null
+    },
+    async obterCorretorPorUsuario(usuario) {
+      const u = usuario.trim().toLowerCase()
+      const l = (estado.corretores ?? []).find((c) => c.usuario === u)
+      return l ? { ...semHash(l), senha_hash: l.senha_hash } : null
+    },
+    async criarCorretor(input) {
+      estado.corretores = estado.corretores ?? []
+      const maior = estado.corretores.reduce((m, c) => (c.id < 1_000_000 ? Math.max(m, c.id) : m), 1000)
+      const agora = agoraIso()
+      const linha: CorretorLinha = {
+        id: input.id ?? maior + 1,
+        usuario: input.usuario.trim().toLowerCase(),
+        nome: input.nome.trim(),
+        email: input.email ?? null,
+        papel: input.papel ?? 'corretor',
+        jetimob_id: input.jetimob_id ?? null,
+        ativo: true,
+        tem_senha: Boolean(input.senha_hash),
+        senha_hash: input.senha_hash,
+        criado_em: agora,
+        atualizado_em: agora,
+      }
+      estado.corretores.push(linha)
+      await persistir()
+      return semHash(linha)
+    },
+    async atualizarCorretor(id, patch) {
+      const l = (estado.corretores ?? []).find((c) => c.id === id)
+      if (!l) return null
+      Object.assign(l, patch, { atualizado_em: agoraIso() })
+      await persistir()
+      return semHash(l)
+    },
 
     async listarClientes(corretorId) {
       return ordenarClientes(estado.clientes.filter((c) => !corretorId || c.corretor_id === corretorId))

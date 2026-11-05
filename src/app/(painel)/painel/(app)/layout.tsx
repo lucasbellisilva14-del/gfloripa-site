@@ -8,7 +8,8 @@ import { iaDisponivel } from '@/lib/painel/analise'
 // mas conferimos de novo aqui (defesa em profundidade).
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const corretor = await getCorretorLogado()
-  if (!corretor) redirect('/painel/login')
+  // sem corretor com cookie presente = conta desativada: sai limpando o cookie
+  if (!corretor) redirect('/api/painel/logout?motivo=inativo')
   const db = await getDb()
   return (
     <div className="painel-shell" data-tema="auto">

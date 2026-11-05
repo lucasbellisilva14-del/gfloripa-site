@@ -41,13 +41,18 @@ function segredo(): string | null {
   return null
 }
 
-// Corretor padrão do painel. Para multiusuário, trocar por consulta a uma
-// tabela de corretores (ver docs/painel/README.md, roadmap fase 2).
+// Gestor padrão do painel: quem entra com a senha mestra (PAINEL_SENHA). É
+// também o dono da ponte do WhatsApp. Os outros corretores vêm da tabela
+// corretores (ver lib/painel/login.ts).
 export function corretorPadrao(): CorretorLogado {
+  const id = Number(process.env.PAINEL_CORRETOR_ID ?? 77723)
   return {
-    id: Number(process.env.PAINEL_CORRETOR_ID ?? 77723),
+    id,
     nome: process.env.PAINEL_CORRETOR_NOME ?? 'Lucas',
     email: process.env.PAINEL_CORRETOR_EMAIL ?? null,
+    usuario: (process.env.PAINEL_CORRETOR_USUARIO ?? 'lucas').trim().toLowerCase(),
+    papel: 'gestor',
+    jetimob_id: id,
   }
 }
 
@@ -113,6 +118,8 @@ export async function verificarTokenSessao(token: string | undefined | null): Pr
     const sessao = JSON.parse(new TextDecoder().decode(payload)) as Sessao
     if (!sessao?.exp || sessao.exp < Math.floor(Date.now() / 1000)) return null
     if (typeof sessao.id !== 'number' || typeof sessao.nome !== 'string') return null
+    // cookies anteriores ao login individual não trazem papel: pede login de novo
+    if (sessao.papel !== 'gestor' && sessao.papel !== 'corretor') return null
     return sessao
   } catch {
     return null

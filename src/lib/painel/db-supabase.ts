@@ -4,7 +4,7 @@
 
 import type { PainelDb, PatchEstadoWhatsapp } from './db'
 import { normalizarTelefone, ordenarClientes } from './db'
-import type { Analise, ChatWhatsapp, Cliente, ComandoWhatsapp, Conversa, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemRecebida, MensagemWhatsapp } from './tipos'
+import type { Analise, ChatWhatsapp, Cliente, ComandoWhatsapp, Conversa, Corretor, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemRecebida, MensagemWhatsapp } from './tipos'
 
 type Linha = Record<string, unknown>
 
@@ -47,9 +47,62 @@ function paraAnalise(l: Linha): Analise {
   }
 }
 
+type CorretorLinha = Omit<Corretor, 'tem_senha'> & { senha_hash: string | null }
+
+const COLUNAS_CORRETOR = 'id,usuario,nome,email,papel,jetimob_id,ativo,criado_em,atualizado_em'
+
+function paraCorretor(l: CorretorLinha): Corretor {
+  const { senha_hash, ...resto } = l
+  return { ...resto, tem_senha: Boolean(senha_hash) }
+}
+
 export function criarDbSupabase(): PainelDb {
   return {
     modo: 'supabase',
+
+    async listarCorretores() {
+      const linhas = await rest<CorretorLinha[]>('corretores', { query: `select=${COLUNAS_CORRETOR},senha_hash&order=nome.asc` })
+      return linhas.map(paraCorretor)
+    },
+    async obterCorretor(id) {
+      const linhas = await rest<CorretorLinha[]>('corretores', { query: `select=${COLUNAS_CORRETOR},senha_hash&id=eq.${q(id)}&limit=1` })
+      return linhas[0] ? paraCorretor(linhas[0]) : null
+    },
+    async obterCorretorPorUsuario(usuario) {
+      const linhas = await rest<CorretorLinha[]>('corretores', {
+        query: `select=${COLUNAS_CORRETOR},senha_hash&usuario=eq.${q(usuario.trim().toLowerCase())}&limit=1`,
+      })
+      return linhas[0] ? { ...paraCorretor(linhas[0]), senha_hash: linhas[0].senha_hash } : null
+    },
+    async criarCorretor(input) {
+      let id = input.id
+      if (!id) {
+        // ids internos a partir de 1001; o gestor padrão (id do Jetimob) fica fora da conta
+        const topo = await rest<{ id: number }[]>('corretores', { query: 'select=id&id=lt.1000000&order=id.desc&limit=1' })
+        id = Math.max(1000, topo[0]?.id ?? 0) + 1
+      }
+      const linhas = await rest<CorretorLinha[]>('corretores', {
+        method: 'POST',
+        body: JSON.stringify({
+          id,
+          usuario: input.usuario.trim().toLowerCase(),
+          nome: input.nome.trim(),
+          email: input.email ?? null,
+          papel: input.papel ?? 'corretor',
+          jetimob_id: input.jetimob_id ?? null,
+          senha_hash: input.senha_hash,
+        }),
+      })
+      return paraCorretor(linhas[0])
+    },
+    async atualizarCorretor(id, patch) {
+      const linhas = await rest<CorretorLinha[]>('corretores', {
+        method: 'PATCH',
+        query: `id=eq.${q(id)}`,
+        body: JSON.stringify({ ...patch, atualizado_em: new Date().toISOString() }),
+      })
+      return linhas[0] ? paraCorretor(linhas[0]) : null
+    },
 
     async listarClientes(corretorId) {
       const filtro = corretorId ? `&corretor_id=eq.${q(corretorId)}` : ''
