@@ -43,6 +43,7 @@ export type Property = {
   exclusividade?: boolean | null
   id_condominio?: number | null
   condominio_nome?: string | null
+  data_cadastro?: string | null
   data_atualizacao?: string | null
   meta_title?: string | null
   meta_description?: string | null

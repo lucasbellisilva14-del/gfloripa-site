@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import LocationSearch, { type Local } from '@/components/LocationSearch'
 
 const slides = [
   { img: '/assets/hero-residencial.webp', pos: '50% 42%', anim: 'kb1' },
@@ -21,12 +22,11 @@ const selectStyle: React.CSSProperties = {
   appearance: 'none',
 }
 
-export default function HeroCarousel({ locais = [] }: { locais?: { bairro: string; cidade: string; total: number }[] }) {
+export default function HeroCarousel({ locais = [] }: { locais?: Local[] }) {
   const [current, setCurrent] = useState(0)
   const [contrato, setContrato] = useState('Comprar')
   const [tipo, setTipo] = useState('Qualquer')
   const [busca, setBusca] = useState('')
-  const [aberto, setAberto] = useState(false)
   const [selecionados, setSelecionados] = useState<string[]>([]) // formato "Bairro|Cidade"
   const router = useRouter()
 
@@ -35,9 +35,6 @@ export default function HeroCarousel({ locais = [] }: { locais?: { bairro: strin
     return () => clearInterval(t)
   }, [])
 
-  const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-  // a lista já vem ranqueada por potencial; o filtro de digitação preserva a ordem
-  const filtrados = locais.filter((l) => !busca.trim() || norm(`${l.bairro} ${l.cidade}`).includes(norm(busca)))
   const pareceCodigo = /^[a-z]{1,3}\d{2,}/i.test(busca.trim())
 
   function toggleLocal(chave: string) {
@@ -174,63 +171,18 @@ export default function HeroCarousel({ locais = [] }: { locais?: { bairro: strin
                 ))}
               </select>
             </div>
-            <div style={{ flex: '2 1 240px', position: 'relative', textAlign: 'left' }}>
-              <div style={{ background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px' }}>
-                <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Localização</div>
-                <input
-                  value={busca}
-                  onChange={(e) => { setBusca(e.target.value); setAberto(true) }}
-                  onFocus={() => setAberto(true)}
-                  onBlur={() => setTimeout(() => setAberto(false), 180)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleBuscar() }}
-                  placeholder={selecionados.length > 0 ? `${selecionados.length} selecionado${selecionados.length > 1 ? 's' : ''}` : 'Bairro, cidade ou código'}
-                  style={{ ...selectStyle, cursor: 'text', padding: 0, border: 'none', background: 'transparent', minWidth: 0 }}
-                />
-              </div>
-
-              {aberto && (
-                <div style={{ position: 'absolute', top: 'calc(100% + 8px)', left: 0, right: 0, zIndex: 60, background: '#0B1738', border: '1px solid rgba(232,178,58,.4)', borderRadius: 13, boxShadow: '0 16px 44px rgba(0,0,0,.55)', maxHeight: 340, overflowY: 'auto', textAlign: 'left' }}>
-                  {pareceCodigo && (
-                    <div
-                      onMouseDown={() => { router.push(`/imovel/${busca.trim().toUpperCase()}`) }}
-                      style={{ padding: '12px 16px', fontSize: 13.5, color: '#E8B23A', cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,.08)' }}
-                    >
-                      Buscar pelo código {busca.trim().toUpperCase()} →
-                    </div>
-                  )}
-                  <div style={{ padding: '10px 16px 6px', fontSize: 10.5, letterSpacing: '.18em', textTransform: 'uppercase', color: 'rgba(255,255,255,.5)' }}>Bairros</div>
-                  {filtrados.length === 0 && (
-                    <div style={{ padding: '10px 16px 14px', fontSize: 13, color: 'rgba(255,255,255,.55)' }}>Nenhum bairro encontrado</div>
-                  )}
-                  {filtrados.slice(0, 40).map((l) => {
-                    const chave = `${l.bairro}|${l.cidade}`
-                    const marcado = selecionados.includes(chave)
-                    return (
-                      <div
-                        key={chave}
-                        onMouseDown={(e) => { e.preventDefault(); toggleLocal(chave) }}
-                        style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '10px 16px', fontSize: 13.5, color: '#fff', cursor: 'pointer', background: marcado ? 'rgba(232,178,58,.12)' : 'transparent' }}
-                      >
-                        <span style={{ width: 17, height: 17, borderRadius: 5, flexShrink: 0, border: `1.5px solid ${marcado ? '#E8B23A' : 'rgba(255,255,255,.35)'}`, background: marcado ? '#E8B23A' : 'transparent', color: '#0A1430', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {marcado ? '✓' : ''}
-                        </span>
-                        {l.bairro}, {l.cidade} - SC
-                      </div>
-                    )
-                  })}
-                </div>
-              )}
-
-              {selecionados.length > 0 && (
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
-                  {selecionados.map((chave) => (
-                    <span key={chave} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'rgba(232,178,58,.92)', color: '#0A1430', fontSize: 12, fontWeight: 600, padding: '4px 10px', borderRadius: 30 }}>
-                      {chave.split('|')[0]}
-                      <span onClick={() => toggleLocal(chave)} style={{ cursor: 'pointer', fontWeight: 700 }}>×</span>
-                    </span>
-                  ))}
-                </div>
-              )}
+            <div style={{ flex: '2 1 240px' }}>
+              <LocationSearch
+                locais={locais}
+                selecionados={selecionados}
+                onToggle={toggleLocal}
+                busca={busca}
+                onBuscaChange={setBusca}
+                onSubmit={handleBuscar}
+                variant="hero"
+                permitirCodigo
+                onCodigo={(codigo) => router.push(`/imovel/${codigo}`)}
+              />
             </div>
             <button
               onClick={handleBuscar}
