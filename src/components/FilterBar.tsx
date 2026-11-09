@@ -86,7 +86,7 @@ export default function FilterBar({
   const update = onChange
   const [buscaLocal, setBuscaLocal] = useState('')
   const [maisAberto, setMaisAberto] = useState(
-    () => CHAVES_MAIS_FILTROS.some((k) => values[k])
+    () => values.maisfiltros === '1' || CHAVES_MAIS_FILTROS.some((k) => values[k])
   )
 
   const selecionados = (values.locais ?? '').split(',').filter(Boolean)
