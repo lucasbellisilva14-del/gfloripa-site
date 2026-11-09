@@ -56,7 +56,7 @@ button { font-family: inherit; }
   .kb-slide { animation:none !important;transform:scale(1.06) !important }
   .pcard { transition:none }
   .reveal { opacity:1;transform:none;transition:none }
-  /* a bottomnav tem 64px; a Lia sobe para não tampar o botão Menu */
+  /* a bottomnav tem 64px; a Laís sobe para não tampar o botão Menu */
   .lia-fab { bottom:78px !important }
   .lia-teaser { bottom:150px !important }
   .lia-panel { bottom:148px !important;height:min(540px, calc(100dvh - 186px)) !important }

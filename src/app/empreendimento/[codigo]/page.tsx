@@ -4,7 +4,7 @@ import Header from '@/components/Header'
 import Footer from '@/components/Footer'
 import Gallery from '@/components/Gallery'
 import PropertyCard from '@/components/PropertyCard'
-import FaleComLia from '@/components/FaleComLia'
+import FaleComLais from '@/components/FaleComLais'
 import { getCondominioByCodigo, getUnidadesDoEmpreendimento, type Condominio, type Property } from '@/lib/jetimob'
 
 const SITE_URL = 'https://www.nagamboaimoveis.com.br'
@@ -112,7 +112,7 @@ export default async function EmpreendimentoPage({ params }: { params: Promise<{
                 ))}
               </div>
 
-              <FaleComLia assunto="este empreendimento" />
+              <FaleComLais assunto="este empreendimento" />
             </div>
           </div>
 

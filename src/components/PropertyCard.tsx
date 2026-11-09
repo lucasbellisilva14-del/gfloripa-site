@@ -2,15 +2,20 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { type Property, formatPrice } from '@/lib/jetimob'
 
-function getContrato(p: Property): string {
-  if (p.contrato?.toLowerCase().includes('venda') || p.contrato?.toLowerCase().includes('compra')) return 'Venda'
-  if (p.contrato?.toLowerCase().includes('temporada')) return 'Temporada'
-  if (p.contrato?.toLowerCase().includes('loca') || p.contrato?.toLowerCase().includes('aluguel')) return 'Aluguel'
+// contratoAtivo: filtro de negócio ativo na listagem. Um imóvel "Compra,Locação"
+// visto na aba Alugar deve mostrar o valor de locação, não o de venda.
+function getContrato(p: Property, contratoAtivo?: string): string {
+  const c = p.contrato?.toLowerCase() ?? ''
+  if (contratoAtivo === 'aluguel' && (c.includes('loca') || c.includes('aluguel'))) return 'Aluguel'
+  if (contratoAtivo === 'temporada' && c.includes('temporada')) return 'Temporada'
+  if (c.includes('venda') || c.includes('compra')) return 'Venda'
+  if (c.includes('temporada')) return 'Temporada'
+  if (c.includes('loca') || c.includes('aluguel')) return 'Aluguel'
   return p.contrato ?? ''
 }
 
-function getPreco(p: Property): string {
-  const contrato = getContrato(p)
+function getPreco(p: Property, contratoAtivo?: string): string {
+  const contrato = getContrato(p, contratoAtivo)
   if (contrato === 'Venda') {
     return p.valor_venda_visivel && p.valor_venda ? formatPrice(p.valor_venda) : 'Consulte'
   }
@@ -28,10 +33,10 @@ function getSpecs(p: Property): string {
   return parts.join(' · ')
 }
 
-export default function PropertyCard({ property }: { property: Property }) {
+export default function PropertyCard({ property, contratoAtivo }: { property: Property; contratoAtivo?: string }) {
   const img = property.imagens?.[0]?.link ?? ''
   const tipoBairro = [property.tipo, property.endereco_bairro].filter(Boolean).join(' · ').toUpperCase()
-  const preco = getPreco(property)
+  const preco = getPreco(property, contratoAtivo)
   const specsText = getSpecs(property)
 
   return (

@@ -20,7 +20,7 @@ export function trackEvent(name: string, params?: Record<string, unknown>) {
   }
 }
 
-// Conversão principal: lead enviado (formulário ou Lia)
+// Conversão principal: lead enviado (formulário ou Laís)
 export function trackLead(origem: 'formulario' | 'lia', codigo?: string) {
   trackEvent('lead_enviado', { origem, codigo })
   if (CONVERSION_LABEL) {

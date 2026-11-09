@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import Header from '@/components/Header'
 import Footer from '@/components/Footer'
+import { getCorretores, type Corretor } from '@/lib/jetimob'
 
 export const metadata: Metadata = {
   title: 'Sobre a Nagamboa Imóveis | Especialistas na Praia da Gamboa',
@@ -21,17 +22,39 @@ const numeros = [
   { valor: '4.9', label: 'Avaliação Google' },
 ]
 
-const corretores = [
-  { nome: 'Dara Maiara', creci: 'CRECI-SC', especialidade: 'Gerente administrativa' },
-  { nome: 'Edmilson de Araujo', creci: 'CRECI-SC', especialidade: 'Garopaba' },
-  { nome: 'Flávio Joaquim Goedert', creci: 'CRECI-SC', especialidade: 'Temporada' },
-  { nome: 'Juliana de Lima', creci: 'CRECI-SC', especialidade: 'Lançamentos' },
-  { nome: 'Lucas Belli da Silva', creci: 'CRECI-SC', especialidade: 'Alto Padrão' },
-  { nome: 'Marcia Regina da Silva', creci: 'CRECI-SC', especialidade: 'Locação' },
-  { nome: 'Murilo Narciso da Silva', creci: 'CRECI-SC', especialidade: 'Praia da Gamboa' },
+// Equipe exibida na página, nesta ordem. Dados ao vivo do painel Jetimob
+// (foto, cargo e CRECI); o papel fixo tem prioridade sobre o cargo do painel.
+const EQUIPE: { id: number; nome: string; papel?: string }[] = [
+  { id: 61012, nome: 'Murilo Narciso da Silva' },
+  { id: 77723, nome: 'Lucas Belli da Silva' },
+  { id: 62186, nome: 'Edmilson de Araujo' },
+  { id: 71664, nome: 'Dara Maiara', papel: 'Gerente administrativa' },
 ]
 
-export default function SobrePage() {
+type MembroEquipe = { nome: string; papel: string; creci: string | null; avatar: string | null }
+
+function montarEquipe(corretores: Corretor[]): MembroEquipe[] {
+  return EQUIPE.map((m) => {
+    const c = corretores.find((x) => x.id === m.id)
+    const cargoPainel = c?.cargo?.trim()
+    const papel = m.papel ?? (cargoPainel && /corretor/i.test(cargoPainel) ? cargoPainel : 'Corretor de imóveis')
+    return {
+      nome: c?.nome ?? m.nome,
+      papel,
+      creci: c?.creci?.trim() ? c.creci.trim() : null,
+      avatar: c?.avatar ?? null,
+    }
+  })
+}
+
+export default async function SobrePage() {
+  let equipe: MembroEquipe[]
+  try {
+    equipe = montarEquipe(await getCorretores())
+  } catch {
+    // API indisponível: mostra a equipe sem foto nem CRECI
+    equipe = montarEquipe([])
+  }
   return (
     <div style={{ background: '#0A1430', minHeight: '100vh', fontFamily: "'Jost',sans-serif", color: '#fff' }}>
       <Header />
@@ -101,12 +124,21 @@ export default function SobrePage() {
             <h2 style={{ fontFamily: "'Marcellus',serif", fontSize: 38 }}>Nossa equipe</h2>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(240px,1fr))', gap: 20 }}>
-            {corretores.map((c) => (
+            {equipe.map((c) => (
               <div key={c.nome} style={{ background: '#10204A', border: '1px solid rgba(255,255,255,.08)', borderRadius: 14, padding: '28px 24px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-                <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'radial-gradient(circle at 50% 125%, #E8B23A 0 52%, transparent 53%), #16265C', marginBottom: 4 }} />
+                {c.avatar ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={c.avatar}
+                    alt={`Foto de ${c.nome}`}
+                    style={{ width: 84, height: 84, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(232,178,58,.65)', marginBottom: 4 }}
+                  />
+                ) : (
+                  <div style={{ width: 84, height: 84, borderRadius: '50%', background: 'radial-gradient(circle at 50% 125%, #E8B23A 0 52%, transparent 53%), #16265C', border: '2px solid rgba(232,178,58,.35)', marginBottom: 4 }} />
+                )}
                 <div style={{ fontFamily: "'Marcellus',serif", fontSize: 18, lineHeight: 1.2 }}>{c.nome}</div>
-                <div style={{ fontSize: 12, color: 'rgba(255,255,255,.5)', letterSpacing: '.06em' }}>{c.creci}</div>
-                <div style={{ fontSize: 13, color: '#E8B23A' }}>{c.especialidade}</div>
+                <div style={{ fontSize: 13, color: '#E8B23A' }}>{c.papel}</div>
+                {c.creci && <div style={{ fontSize: 12, color: 'rgba(255,255,255,.5)', letterSpacing: '.06em' }}>CRECI {c.creci}</div>}
                 <a
                   href="https://wa.me/5548984727799"
                   target="_blank"

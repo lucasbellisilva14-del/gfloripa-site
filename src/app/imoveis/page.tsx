@@ -35,6 +35,8 @@ function paraVitrine(p: Property): Property {
     valor_locacao_visivel: p.valor_locacao_visivel,
     endereco_bairro: p.endereco_bairro,
     endereco_cidade: p.endereco_cidade,
+    data_cadastro: p.data_cadastro,
+    data_atualizacao: p.data_atualizacao,
     imagens: p.imagens?.length ? [p.imagens[0]] : [],
   } as Property
 }

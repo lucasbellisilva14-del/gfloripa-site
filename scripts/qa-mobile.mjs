@@ -5,7 +5,7 @@
 //   pastaScreenshots padrão: qa-screenshots/
 // Verifica: meta viewport, overflow horizontal, elementos vazando da viewport,
 // fontes menores que 12px, inputs/selects com fonte menor que 16px (zoom no iOS),
-// alvos de toque pequenos, e testa os cliques principais (burger, card, modal, Lia).
+// alvos de toque pequenos, e testa os cliques principais (burger, card, modal, Laís).
 
 import { chromium, devices } from 'playwright'
 import { mkdirSync } from 'node:fs'
@@ -131,11 +131,11 @@ async function main() {
   await page.evaluate(() => document.querySelectorAll('button').forEach((b) => { if (b.textContent.trim() === '✕') b.click() }))
   await page.waitForTimeout(300)
 
-  // clique: balão da Lia abre o chat
+  // clique: balão da Laís abre o chat
   await page.locator('button[aria-label="Abrir chat"]').click({ timeout: 5000 }).catch(() => {})
   await page.waitForTimeout(500)
-  const chatAberto = await page.evaluate(() => document.body.textContent.includes('Lia · Nagamboa Imóveis'))
-  report('home', 'balão da Lia abre o chat', chatAberto)
+  const chatAberto = await page.evaluate(() => document.body.textContent.includes('Laís · Nagamboa Imóveis'))
+  report('home', 'balão da Laís abre o chat', chatAberto)
   if (chatAberto) {
     const chatOk = await page.evaluate(() => {
       const input = [...document.querySelectorAll('input')].find((i) => i.placeholder?.includes('mensagem'))
