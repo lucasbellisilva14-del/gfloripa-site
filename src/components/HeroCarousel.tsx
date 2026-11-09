@@ -26,8 +26,6 @@ export default function HeroCarousel({ locais = [] }: { locais?: Local[] }) {
   const [current, setCurrent] = useState(0)
   const [contrato, setContrato] = useState('Comprar')
   const [tipo, setTipo] = useState('Qualquer')
-  const [quartos, setQuartos] = useState('')
-  const [precoMax, setPrecoMax] = useState('')
   const [busca, setBusca] = useState('')
   const [selecionados, setSelecionados] = useState<string[]>([]) // formato "Bairro|Cidade"
   const router = useRouter()
@@ -58,25 +56,6 @@ export default function HeroCarousel({ locais = [] }: { locais?: Local[] }) {
       return
     }
     if (selecionados.length > 0) q.set('locais', selecionados.join(','))
-    if (quartos) q.set('quartos', quartos)
-    if (precoMax) q.set('preco_max', precoMax)
-    router.push(`/imoveis?${q.toString()}`)
-  }
-
-  function buscaAvancada() {
-    const contratoMap: Record<string, string> = {
-      'Comprar': 'compra',
-      'Alugar': 'aluguel',
-      'Temporada': 'temporada',
-      'Lançamentos': 'lancamento',
-    }
-    const q = new URLSearchParams()
-    q.set('contrato', contratoMap[contrato] ?? 'compra')
-    if (tipo !== 'Qualquer') q.set('tipo', tipo)
-    if (selecionados.length > 0) q.set('locais', selecionados.join(','))
-    if (quartos) q.set('quartos', quartos)
-    if (precoMax) q.set('preco_max', precoMax)
-    q.set('maisfiltros', '1')
     router.push(`/imoveis?${q.toString()}`)
   }
 
@@ -184,8 +163,8 @@ export default function HeroCarousel({ locais = [] }: { locais?: Local[] }) {
             ))}
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <div style={{ flex: '1 1 130px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Tipo de imóvel</div>
+            <div style={{ flex: '1 1 140px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
+              <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Tipo</div>
               <select value={tipo} onChange={(e) => setTipo(e.target.value)} style={selectStyle}>
                 {['Qualquer', 'Apartamento', 'Casa', 'Terreno', 'Cobertura', 'Casa de Condomínio'].map((o) => (
                   <option key={o} value={o} style={{ background: '#0A1430' }}>{o}</option>
@@ -205,41 +184,11 @@ export default function HeroCarousel({ locais = [] }: { locais?: Local[] }) {
                 onCodigo={(codigo) => router.push(`/imovel/${codigo}`)}
               />
             </div>
-            <div style={{ flex: '0 1 110px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Quartos</div>
-              <select value={quartos} onChange={(e) => setQuartos(e.target.value)} style={selectStyle}>
-                <option value="" style={{ background: '#0A1430' }}>Qualquer</option>
-                {['1', '2', '3', '4'].map((n) => (
-                  <option key={n} value={n} style={{ background: '#0A1430' }}>{n}+</option>
-                ))}
-              </select>
-            </div>
-            <div style={{ flex: '0 1 140px', background: 'rgba(255,255,255,.12)', borderRadius: 11, padding: '12px 16px', textAlign: 'left' }}>
-              <div style={{ fontSize: 11, letterSpacing: '.14em', textTransform: 'uppercase', color: 'rgba(255,255,255,.55)' }}>Preço até</div>
-              <select value={precoMax} onChange={(e) => setPrecoMax(e.target.value)} style={selectStyle}>
-                <option value="" style={{ background: '#0A1430' }}>Qualquer</option>
-                <option value="300000" style={{ background: '#0A1430' }}>R$ 300 mil</option>
-                <option value="500000" style={{ background: '#0A1430' }}>R$ 500 mil</option>
-                <option value="800000" style={{ background: '#0A1430' }}>R$ 800 mil</option>
-                <option value="1000000" style={{ background: '#0A1430' }}>R$ 1 milhão</option>
-                <option value="1500000" style={{ background: '#0A1430' }}>R$ 1,5 milhão</option>
-                <option value="2000000" style={{ background: '#0A1430' }}>R$ 2 milhões</option>
-                <option value="3000000" style={{ background: '#0A1430' }}>R$ 3 milhões</option>
-              </select>
-            </div>
             <button
               onClick={handleBuscar}
               style={{ flex: '1 1 auto', background: '#E8B23A', color: '#0A1430', border: 'none', borderRadius: 11, padding: '14px 30px', fontSize: 14, fontWeight: 500, letterSpacing: '.04em', cursor: 'pointer' }}
             >
               Buscar
-            </button>
-          </div>
-          <div style={{ textAlign: 'right', paddingTop: 10 }}>
-            <button
-              onClick={buscaAvancada}
-              style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,.75)', fontSize: 12.5, cursor: 'pointer', fontFamily: "'Jost',sans-serif", textDecoration: 'underline', textUnderlineOffset: 3 }}
-            >
-              Busca avançada: banheiros, vagas, área e mais →
             </button>
           </div>
         </div>
