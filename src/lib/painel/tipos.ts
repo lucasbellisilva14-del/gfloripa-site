@@ -261,6 +261,8 @@ export type DiagnosticoWhatsapp = {
   ultima_vista_em: string | null
   ultimo_erro: string | null
   painel_url: string | null
+  // false = sessão em disco sem volume: não sobrevive a reinícios do serviço
+  sessao_persistente?: boolean | null
 }
 
 export type EstadoWhatsapp = {

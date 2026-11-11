@@ -59,5 +59,6 @@ function normalizarDiagnostico(d: Partial<DiagnosticoWhatsapp> | null): Diagnost
     ultima_vista_em: textoOuNulo(d.ultima_vista_em, 40),
     ultimo_erro: textoOuNulo(d.ultimo_erro, 300),
     painel_url: textoOuNulo(d.painel_url, 200),
+    sessao_persistente: typeof d.sessao_persistente === 'boolean' ? d.sessao_persistente : null,
   }
 }

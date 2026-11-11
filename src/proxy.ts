@@ -40,6 +40,10 @@ export async function proxy(request: NextRequest) {
   return NextResponse.redirect(url)
 }
 
+// As rotas da ponte ficam fora do matcher: o proxy não precisa rodar nelas
+// (a própria rota confere o token) e, na Vercel, o tráfego que passa pelo
+// proxy conta como transferência também. A lista ROTAS_TOKEN acima continua
+// como defesa, caso o matcher mude.
 export const config = {
-  matcher: ['/painel/:path*', '/api/painel/:path*'],
+  matcher: ['/painel/:path*', '/api/painel/((?!whatsapp/(?:entrada|estado|sessao|comando|contatos)$).*)'],
 }

@@ -29,7 +29,8 @@ aparece em `/painel/whatsapp`, não no terminal.
 | `PORTA` | não | 8080 | Porta do endereço de saúde |
 | `INTERVALO_ENVIO_MS` | não | 3000 | Agrupamento antes de enviar ao painel |
 | `INTERVALO_PULSO_MS` | não | 30000 | Sinal de vida ao painel, com diagnóstico |
-| `INTERVALO_COMANDO_MS` | não | 5000 | Consulta da fila de comandos no painel |
+| `INTERVALO_COMANDO_MS` | não | 30000 | Consulta da fila de comandos no painel |
+| `SESSAO_DIR` | não | volume do Railway ou `./.sessao` | Pasta onde a sessão do WhatsApp fica em disco. No Railway, crie um Volume no serviço e não precisa definir. |
 | `JANELA_DIAS` | não | 7 | Quantos dias para trás aceitar ao conectar |
 | `LOG_LEVEL` | não | warn | Nível de registro da biblioteca |
 

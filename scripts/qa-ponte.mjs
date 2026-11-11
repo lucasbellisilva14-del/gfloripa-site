@@ -10,6 +10,7 @@
 
 import { spawn } from 'node:child_process'
 import path from 'node:path'
+import os from 'node:os'
 
 const PAINEL = process.argv[2] ?? 'http://localhost:3000'
 const TOKEN = process.argv[3] ?? process.env.PAINEL_WHATSAPP_TOKEN ?? 'token-de-teste'
@@ -30,6 +31,7 @@ const ponte = spawn('node', ['index.mjs'], {
     PORTA: String(PORTA),
     INTERVALO_PULSO_MS: '2000',
     INTERVALO_COMANDO_MS: '1000',
+    SESSAO_DIR: path.join(os.tmpdir(), `qa-sessao-${Date.now()}`),
     RAILWAY_GIT_COMMIT_SHA: 'qa0000000',
   },
   stdio: ['ignore', 'pipe', 'pipe'],

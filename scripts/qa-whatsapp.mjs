@@ -36,6 +36,10 @@ ok(r.ok, 'sessão salva')
 r = await ponte('sessao')
 const sessao = (await r.json()).dados
 ok(sessao?.creds?.teste === 1, 'sessão devolvida igual')
+r = await ponte('sessao', { method: 'PUT', body: JSON.stringify({ dados: { creds: { lixo: 'x'.repeat(300 * 1024) }, keys: {} } }) })
+ok(r.status === 413, `sessão acima de 256 KB é recusada (${r.status})`)
+r = await fetch(`${BASE}/api/painel/whatsapp/sessao`, { method: 'PUT', body: '{}' })
+ok(r.status === 401 || r.status === 503, `rota da ponte fora do proxy continua exigindo token (${r.status})`)
 
 // 4. mensagens: grupos e vazias descartadas, duplicadas ignoradas
 // Conversa nova a cada execucao, para o teste nao esbarrar em dados deixados
