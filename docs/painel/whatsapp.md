@@ -16,9 +16,12 @@ WhatsApp  ──QR──▶  servicos/whatsapp   ──HTTP (token)──▶  /a
 ```
 
 O serviço da ponte usa a biblioteca Baileys, que fala o mesmo protocolo do
-WhatsApp Web. Ele não guarda nada: repassa ao painel, e o painel grava no
-Supabase. Até a sessão do WhatsApp fica no painel, para o serviço reiniciar
-sem você precisar parear de novo.
+WhatsApp Web. As mensagens ele repassa ao painel, que grava no Supabase. A
+sessão do WhatsApp (credenciais e chaves de criptografia) fica em disco no
+próprio serviço, num Volume do Railway, para ele reiniciar sem você parear de
+novo. Ela nunca passa pelo painel: cresce com o uso, chega a vários megabytes,
+e foi reenviá-la à Vercel a cada mudança que estourou a cota de transferência
+da conta em novembro de 2026 (ver "Consumo na Vercel" abaixo).
 
 O que a ponte captura:
 
@@ -120,6 +123,26 @@ aparelho, e aponte para o código. O status vira Conectado e as conversas
 começam a entrar conforme chegam mensagens novas.
 
 Se o código expirar, a tela busca outro sozinha.
+
+### 6. Criar o Volume da sessão
+
+No Railway, no serviço da ponte: Settings, Volumes, **Add Volume**, caminho
+`/dados` (qualquer um serve). O serviço reinicia e passa a guardar a sessão
+ali. Sem o volume a ponte funciona, mas a sessão some a cada deploy e o QR
+precisa ser lido de novo; a tela do WhatsApp avisa quando isso acontece.
+
+## Consumo na Vercel
+
+Tudo que a ponte manda ao painel passa pelas funções da Vercel e conta como
+Fast Origin Transfer. O que ela manda hoje é pequeno: mensagens de texto em
+lotes (poucos KB), um pulso de 1 KB a cada 30 segundos e uma consulta de
+comandos a cada 30 segundos. Estimativa: menos de 50 MB por mês por número.
+
+O que não pode voltar a acontecer: enviar a sessão do WhatsApp ao painel. A
+rota `PUT /api/painel/whatsapp/sessao` recusa corpos acima de 256 KB por
+isso, e o proxy do painel não roda nas rotas da ponte. Se um dia o consumo
+subir de novo, o primeiro lugar a olhar é Observability, Functions, na Vercel,
+ordenado por invocações.
 
 ## Controle pela tela
 
@@ -252,6 +275,9 @@ outra pessoa, nunca de mensagem enviada por você, e as conversas antigas são
 corrigidas sozinhas quando o contato escreve ou quando a agenda chega. Para
 resolver na hora, use **Renomear** na linha da conversa; se a ficha do cliente
 nasceu com o nome errado, ela é corrigida junto.
+
+**A tela avisa "sem disco persistente".** Falta o Volume no serviço do
+Railway (passo 6 da instalação). Até criar, cada deploy pede QR de novo.
 
 **O código QR não aparece.** O serviço não está no ar, ou `PAINEL_URL` e
 `PAINEL_WHATSAPP_TOKEN` não batem entre o Railway e a Vercel. Veja os

@@ -116,12 +116,20 @@ export default function WhatsappPainel(p: Props) {
     const intervalo = emRajada ? 1000 : situacao === 'conectado' ? 10000 : 2000
     const ciclo = (atraso: number) => {
       timer.current = setTimeout(async () => {
-        await atualizar()
-        ciclo(intervalo)
+        // aba em segundo plano: não consulta; volta ao ritmo quando reaparecer
+        if (!document.hidden) await atualizar()
+        ciclo(document.hidden ? 60000 : intervalo)
       }, atraso)
     }
+    const aoVoltar = () => {
+      if (document.hidden) return
+      if (timer.current) clearTimeout(timer.current)
+      ciclo(0)
+    }
+    document.addEventListener('visibilitychange', aoVoltar)
     ciclo(agora === 0 ? 0 : intervalo)
     return () => {
+      document.removeEventListener('visibilitychange', aoVoltar)
       if (timer.current) clearTimeout(timer.current)
     }
     // agora só importa para disparar a primeira rodada sem espera
@@ -305,6 +313,14 @@ export default function WhatsappPainel(p: Props) {
                 <strong>O serviço não está respondendo.</strong> Nenhuma das duas vias deu sinal: nem o endereço direto, nem o
                 sinal de vida que ele manda a cada 30 segundos. Os botões deixam o pedido na fila, mas ele só executa quando o
                 serviço voltar. Reinicie na hospedagem{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''} e veja os registros: a causa costuma estar na última linha.
+              </div>
+            )}
+
+            {d?.sessao_persistente === false && (
+              <div className="p-alert p-alert-warn" style={{ marginBottom: 12 }} data-teste="sem-volume">
+                <strong>O serviço está sem disco persistente.</strong> A sessão do WhatsApp vive só até o próximo reinício ou deploy,
+                e aí o QR precisa ser lido de novo. No Railway{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''}: serviço da ponte, aba
+                Settings, Volumes, Add Volume (qualquer caminho, por exemplo /dados). O serviço reinicia sozinho e passa a guardar a sessão lá.
               </div>
             )}
 

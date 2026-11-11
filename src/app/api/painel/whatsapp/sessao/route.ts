@@ -2,9 +2,15 @@ import { type NextRequest } from 'next/server'
 import { getDb } from '@/lib/painel/db'
 import { exigirTokenPonte } from '@/lib/painel/whatsapp-token'
 
-// Sessão do WhatsApp (credenciais do Baileys) guardada pelo painel para o
-// serviço ponte reiniciar sem parear de novo. Só a ponte acessa, por token.
-// O conteúdo é segredo: nunca é exposto a nenhuma tela.
+// Sessão do WhatsApp guardada pelo painel. Só a ponte acessa, por token, e o
+// conteúdo nunca é exposto a nenhuma tela.
+//
+// Desde novembro de 2026 a ponte guarda a sessão em disco próprio e não usa
+// mais esta rota. Ela fica por compatibilidade, com limite de tamanho: a
+// sessão do WhatsApp chega a megabytes, e reenviá-la a cada mudança consumiu
+// a cota de transferência da Vercel (Fast Origin Transfer) da conta inteira.
+const MAX_BYTES = 256 * 1024
+
 export async function GET(request: NextRequest) {
   const auth = exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
@@ -15,9 +21,15 @@ export async function GET(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   const auth = exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
+  const tamanho = Number(request.headers.get('content-length') ?? 0)
+  if (tamanho > MAX_BYTES) {
+    return Response.json({ error: `Sessão grande demais (${Math.round(tamanho / 1024)} KB; máximo ${MAX_BYTES / 1024} KB). Guarde a sessão em disco no serviço.` }, { status: 413 })
+  }
   let body: { dados?: unknown }
   try {
-    body = await request.json()
+    const texto = await request.text()
+    if (texto.length > MAX_BYTES) return Response.json({ error: 'Sessão grande demais' }, { status: 413 })
+    body = JSON.parse(texto)
   } catch {
     return Response.json({ error: 'Corpo inválido' }, { status: 400 })
   }

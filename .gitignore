@@ -48,3 +48,6 @@ next-env.d.ts
 
 # dependências dos serviços auxiliares (servicos/*)
 servicos/*/node_modules/
+
+# sessão do WhatsApp da ponte rodando local
+/servicos/whatsapp/.sessao/

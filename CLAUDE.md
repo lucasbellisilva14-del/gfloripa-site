@@ -55,7 +55,9 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
 - Ponte do WhatsApp em servicos/whatsapp (Baileys, somente leitura, roda fora
   da Vercel porque precisa de socket aberto). Repassa mensagens ao painel por
   token (PAINEL_WHATSAPP_TOKEN). Nunca envia mensagem: é o que mais provoca
-  bloqueio de número. Ver docs/painel/whatsapp.md.
+  bloqueio de número. A sessão do WhatsApp fica em disco no serviço (Volume
+  do Railway), NUNCA no painel: reenviá-la à Vercel estourou o Fast Origin
+  Transfer da conta em 11/2026. Ver docs/painel/whatsapp.md.
 - A tela do WhatsApp comanda o serviço (reconectar, parear de novo, pulso):
   direto se WHATSAPP_PONTE_URL estiver na Vercel, senão por fila que o serviço
   consulta a cada 5 s. O serviço manda pulso a cada 30 s com diagnóstico e

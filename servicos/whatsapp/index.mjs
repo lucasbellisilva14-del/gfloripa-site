@@ -24,18 +24,20 @@
 //   PORTA / PORT          porta HTTP (padrão 8080)
 //   INTERVALO_ENVIO_MS    agrupamento de mensagens antes de enviar (padrão 3000)
 //   INTERVALO_PULSO_MS    sinal de vida ao painel (padrão 30000)
-//   INTERVALO_COMANDO_MS  consulta da fila de comandos (padrão 5000)
+//   INTERVALO_COMANDO_MS  consulta da fila de comandos (padrão 30000)
+//   SESSAO_DIR            pasta da sessão do WhatsApp (padrão: volume do Railway ou ./.sessao)
 //   JANELA_DIAS           quantos dias para trás aceitar ao conectar (padrão 7)
 //   LOG_LEVEL             nível de registro da biblioteca (padrão warn)
 
 import { createServer } from 'node:http'
+import { promises as fs } from 'node:fs'
+import path from 'node:path'
 import makeWASocket, {
-  BufferJSON,
+  Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
-  initAuthCreds,
   makeCacheableSignalKeyStore,
-  proto,
+  useMultiFileAuthState as abrirEstadoEmArquivos,
 } from '@whiskeysockets/baileys'
 import pino from 'pino'
 import QRCode from 'qrcode'
@@ -46,7 +48,21 @@ const TOKEN = process.env.PAINEL_WHATSAPP_TOKEN ?? ''
 const PORTA = Number(process.env.PORTA ?? process.env.PORT ?? 8080)
 const INTERVALO_ENVIO_MS = Number(process.env.INTERVALO_ENVIO_MS ?? 3000)
 const INTERVALO_PULSO_MS = Number(process.env.INTERVALO_PULSO_MS ?? 30000)
-const INTERVALO_COMANDO_MS = Number(process.env.INTERVALO_COMANDO_MS ?? 5000)
+const INTERVALO_COMANDO_MS = Number(process.env.INTERVALO_COMANDO_MS ?? 30000)
+
+// Onde a sessão do WhatsApp (credenciais e chaves) fica guardada: em disco,
+// no próprio serviço. Nunca mais passa pelo painel. No Railway, crie um Volume
+// no serviço: ele define RAILWAY_VOLUME_MOUNT_PATH e a sessão sobrevive a
+// deploys e reinícios. Sem volume, a sessão vive só até o próximo reinício e
+// o pareamento precisa ser refeito (a tela avisa).
+//
+// Por que não no painel: a sessão cresce com o uso (chaves de criptografia de
+// cada conversa) e chega a vários megabytes. Reenviá-la à Vercel a cada
+// mudança de chave consumiu a cota de transferência da conta inteira em uma
+// semana (novembro de 2026) e pausou o site público.
+const VOLUME = process.env.RAILWAY_VOLUME_MOUNT_PATH ?? ''
+const SESSAO_DIR = process.env.SESSAO_DIR || (VOLUME ? path.join(VOLUME, 'sessao') : path.join(process.cwd(), '.sessao'))
+const SESSAO_PERSISTENTE = Boolean(process.env.SESSAO_DIR || VOLUME)
 // Depois de um comando ou de uma mudança de conexão, o corretor costuma estar
 // olhando a tela: por dois minutos a fila é consultada a cada 1,5 s.
 const INTERVALO_COMANDO_ATENTO_MS = 1500
@@ -110,6 +126,7 @@ async function publicarEstado(patch) {
           versao: VERSAO,
           desde: INICIO,
           painel_url: PAINEL_URL,
+          sessao_persistente: SESSAO_PERSISTENTE,
         },
       }),
     })
@@ -125,7 +142,7 @@ async function publicarEstado(patch) {
 async function conferirPainel() {
   for (;;) {
     try {
-      await painel('sessao')
+      await painel('comando') // resposta pequena; só confere token e endereço
       return
     } catch (err) {
       const msg = err.message
@@ -140,70 +157,19 @@ async function conferirPainel() {
   }
 }
 
-// --- sessão guardada no painel --------------------------------------------
+// --- sessão em disco ---------------------------------------------------------
 
-async function carregarSessao() {
-  try {
-    const { dados } = await painel('sessao')
-    if (!dados) return null
-    return JSON.parse(JSON.stringify(dados), BufferJSON.reviver)
-  } catch (err) {
-    diga('não consegui carregar a sessão:', err.message)
-    registrarErro(`carregar sessão: ${err.message}`)
-    return null
-  }
+async function apagarSessaoLocal() {
+  await fs.rm(SESSAO_DIR, { recursive: true, force: true }).catch(() => {})
 }
 
-let salvandoSessao = null
-let sessaoSuja = false
-
-function agendarSalvarSessao(estado) {
-  sessaoSuja = true
-  if (salvandoSessao) return
-  salvandoSessao = setTimeout(async () => {
-    salvandoSessao = null
-    if (!sessaoSuja) return
-    sessaoSuja = false
-    try {
-      const dados = JSON.parse(JSON.stringify({ creds: estado.creds, keys: estado.keys }, BufferJSON.replacer))
-      await painel('sessao', { method: 'PUT', body: JSON.stringify({ dados }) })
-    } catch (err) {
-      diga('não consegui salvar a sessão:', err.message)
-      registrarErro(`salvar sessão: ${err.message}`)
-      sessaoSuja = true
-    }
-  }, 2000)
-}
-
-function montarAuth(salvo) {
-  const estado = { creds: salvo?.creds ?? initAuthCreds(), keys: salvo?.keys ?? {} }
-  const keys = {
-    get: (tipo, ids) => {
-      const saida = {}
-      const grupo = estado.keys[tipo] ?? {}
-      for (const id of ids) {
-        let valor = grupo[id]
-        if (tipo === 'app-state-sync-key' && valor) valor = proto.Message.AppStateSyncKeyData.fromObject(valor)
-        if (valor) saida[id] = valor
-      }
-      return saida
-    },
-    set: (dados) => {
-      for (const tipo of Object.keys(dados)) {
-        estado.keys[tipo] = estado.keys[tipo] ?? {}
-        for (const id of Object.keys(dados[tipo])) {
-          const valor = dados[tipo][id]
-          if (valor) estado.keys[tipo][id] = valor
-          else delete estado.keys[tipo][id]
-        }
-      }
-      agendarSalvarSessao(estado)
-    },
-  }
+async function abrirSessao() {
+  await fs.mkdir(SESSAO_DIR, { recursive: true })
+  const { state, saveCreds } = await abrirEstadoEmArquivos(SESSAO_DIR)
   return {
-    estado,
-    auth: { creds: estado.creds, keys: makeCacheableSignalKeyStore(keys, log) },
-    salvarCreds: () => agendarSalvarSessao(estado),
+    auth: { creds: state.creds, keys: makeCacheableSignalKeyStore(state.keys, log) },
+    salvarCreds: saveCreds,
+    pareada: Boolean(state.creds?.registered),
   }
 }
 
@@ -278,9 +244,15 @@ setInterval(escoarFila, INTERVALO_ENVIO_MS)
 let socket = null
 let encerrando = false
 let reconectarAgendado = null
+let quedasSeguidas = 0
 
-function agendarReconexao(ms) {
+// Reconexão com paciência: 5 s, 15 s, 45 s, ... até 10 min entre tentativas.
+// Reconectar em ciclo curto é padrão de robô para o WhatsApp e gasta à toa.
+function agendarReconexao(minimoMs) {
   if (encerrando || reconectarAgendado) return
+  const espera = Math.min(Math.max(minimoMs, 5000 * 3 ** quedasSeguidas), 600000)
+  quedasSeguidas++
+  if (espera > minimoMs) diga(`próxima tentativa em ${Math.round(espera / 1000)} s`)
   reconectarAgendado = setTimeout(() => {
     reconectarAgendado = null
     conectar().catch((err) => {
@@ -288,7 +260,7 @@ function agendarReconexao(ms) {
       registrarErro(`reconectar: ${err.message}`)
       agendarReconexao(10000)
     })
-  }, ms)
+  }, espera)
 }
 
 async function conectar() {
@@ -304,8 +276,8 @@ async function conectar() {
     socket = null
   }
 
-  const salvo = await carregarSessao()
-  const { auth, salvarCreds } = montarAuth(salvo)
+  const { auth, salvarCreds, pareada } = await abrirSessao()
+  if (!pareada) diga(`sem sessão em ${SESSAO_DIR}: vai pedir QR${SESSAO_PERSISTENTE ? '' : ' (sem volume: a sessão não sobrevive a reinícios)'}`)
   const { version } = await fetchLatestBaileysVersion()
 
   await publicarEstado({ status: 'conectando', detalhe: null })
@@ -317,7 +289,8 @@ async function conectar() {
     markOnlineOnConnect: false,
     syncFullHistory: false,
     generateHighQualityLinkPreview: false,
-    browser: ['Painel Nagamboa', 'Chrome', '1.0.0'],
+    // identidade igual à de um WhatsApp Web comum, em vez de um nome inventado
+    browser: Browsers.macOS('Chrome'),
   })
   socket = s
 
@@ -335,6 +308,7 @@ async function conectar() {
     }
 
     if (connection === 'open') {
+      quedasSeguidas = 0
       meuNome = (s.user?.name ?? '').trim() || meuNome
       const numero = (s.user?.id ?? '').split(':')[0].split('@')[0]
       diga(`conectado como ${numero} | versão ${VERSAO} | janela de ${JANELA_DIAS} dia(s) | painel: ${PAINEL_URL}`)
@@ -350,7 +324,8 @@ async function conectar() {
       if (codigo === DisconnectReason.loggedOut) {
         // o celular desconectou este aparelho: apaga a sessão e pede QR novo
         diga('sessão encerrada pelo celular, limpando credenciais')
-        await painel('sessao', { method: 'DELETE' }).catch(() => {})
+        await apagarSessaoLocal()
+        await publicarEstado({ status: 'desconectado', qr: null, numero: null })
         agendarReconexao(3000)
         return
       }
@@ -433,7 +408,7 @@ async function executarComando(comando, origem) {
     } catch {
       // segue para a limpeza
     }
-    await painel('sessao', { method: 'DELETE' }).catch(() => {})
+    await apagarSessaoLocal()
     await publicarEstado({ status: 'conectando', qr: null, numero: null, detalhe: 'Novo pareamento pedido pelo painel' })
     conectar().catch((err) => {
       diga('falha ao iniciar novo pareamento:', err.message)
