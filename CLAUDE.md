@@ -40,7 +40,9 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
 
 - Área interna separada do site: src/app/(painel)/painel, src/app/api/painel,
   src/lib/painel, src/components/painel. Protegida por src/proxy.ts (cookie
-  assinado). Login por usuário e senha (tabela corretores, hash PBKDF2,
+  assinado). Em produção o painel roda no Railway, em
+  painel.nagamboaimoveis.com.br (variável PAINEL_HOST faz o site redirecionar
+  /painel para lá); o site segue na Vercel Hobby. Ver docs/painel/hospedagem.md. Login por usuário e senha (tabela corretores, hash PBKDF2,
   papéis gestor/corretor, Equipe em Configurações); PAINEL_SENHA segue como
   senha mestra do gestor padrão. Painel do gestor em /painel/equipe (somente
   leitura: números por corretor, funil, relatório da equipe pela I.A.).
