@@ -1,32 +1,12 @@
 import WhatsappPainel from '@/components/painel/WhatsappPainel'
 import { getCorretorLogado } from '@/lib/painel/sessao'
 import { getDb } from '@/lib/painel/db'
-import { tokenConfigurado } from '@/lib/painel/whatsapp-token'
-import { urlPonte } from '@/lib/painel/whatsapp-ponte'
+import { ponteDoCorretor } from '@/lib/painel/whatsapp-token'
 import { envioJetimobHabilitado } from '@/lib/painel/jetimob-escrita'
-import { corretorPadrao } from '@/lib/painel/auth'
 
 export default async function WhatsappPage() {
   const corretor = (await getCorretorLogado())!
-  const dono = corretorPadrao()
-  // A ponte conecta um número só, o do gestor padrão. Os demais veem o aviso.
-  if (corretor.id !== dono.id) {
-    return (
-      <>
-        <div className="p-head">
-          <div>
-            <h1>WhatsApp</h1>
-            <p>Captura automática das conversas do WhatsApp.</p>
-          </div>
-        </div>
-        <section className="p-card">
-          <div className="p-alert p-alert-info" data-teste="whatsapp-outro-corretor">
-            O WhatsApp conectado ao painel é o número de <strong>{dono.nome}</strong>. A conexão é por número, e hoje há uma só. Enquanto isso, use <strong>Analisar conversa</strong> com a exportação ou prints das suas conversas: o resultado entra na sua carteira normalmente.
-          </div>
-        </section>
-      </>
-    )
-  }
+  const ponte = await ponteDoCorretor(corretor)
   const db = await getDb()
   const [estado, chats, clientes] = await Promise.all([
     db.obterEstadoWhatsapp(corretor.id),
@@ -47,13 +27,18 @@ export default async function WhatsappPage() {
           <p>Suas conversas entram sozinhas no painel e a I.A. analisa quando você pedir. O painel só lê: quem responde é você, pelo WhatsApp de sempre.</p>
         </div>
       </div>
+      {!ponte.token && (
+        <div className="p-alert p-alert-info" style={{ marginBottom: 16 }} data-teste="whatsapp-sem-token">
+          O seu número ainda não tem uma ponte configurada. {corretor.papel === 'gestor' ? <>Gere o token em <strong>Configurações, Equipe, WhatsApp</strong> e suba uma instância do serviço com ele (ver docs/painel/whatsapp.md).</> : <>Peça ao gestor para gerar o seu token do WhatsApp em Configurações, Equipe.</>} Enquanto isso, use <strong>Analisar conversa</strong> com a exportação ou prints das suas conversas: o resultado entra na sua carteira normalmente.
+        </div>
+      )}
       <WhatsappPainel
         estadoInicial={estado}
         chatsIniciais={chats}
         clientesIniciais={resumo}
-        pontePronta={tokenConfigurado()}
-        diretoConfigurado={Boolean(urlPonte())}
-        urlDireta={urlPonte()}
+        pontePronta={Boolean(ponte.token)}
+        diretoConfigurado={Boolean(ponte.url)}
+        urlDireta={ponte.url}
         hospedagemUrl={process.env.WHATSAPP_HOSPEDAGEM_URL?.trim() || null}
         envioJetimob={envioJetimobHabilitado()}
       />

@@ -47,13 +47,13 @@ function paraAnalise(l: Linha): Analise {
   }
 }
 
-type CorretorLinha = Omit<Corretor, 'tem_senha'> & { senha_hash: string | null }
+type CorretorLinha = Omit<Corretor, 'tem_senha' | 'tem_token_whatsapp'> & { senha_hash: string | null; whatsapp_token: string | null }
 
-const COLUNAS_CORRETOR = 'id,usuario,nome,email,papel,jetimob_id,ativo,criado_em,atualizado_em'
+const COLUNAS_CORRETOR = 'id,usuario,nome,email,papel,jetimob_id,ativo,whatsapp_ponte_url,criado_em,atualizado_em'
 
 function paraCorretor(l: CorretorLinha): Corretor {
-  const { senha_hash, ...resto } = l
-  return { ...resto, tem_senha: Boolean(senha_hash) }
+  const { senha_hash, whatsapp_token, ...resto } = l
+  return { ...resto, tem_senha: Boolean(senha_hash), tem_token_whatsapp: Boolean(whatsapp_token), whatsapp_ponte_url: l.whatsapp_ponte_url ?? null }
 }
 
 export function criarDbSupabase(): PainelDb {
@@ -61,16 +61,28 @@ export function criarDbSupabase(): PainelDb {
     modo: 'supabase',
 
     async listarCorretores() {
-      const linhas = await rest<CorretorLinha[]>('corretores', { query: `select=${COLUNAS_CORRETOR},senha_hash&order=nome.asc` })
+      const linhas = await rest<CorretorLinha[]>('corretores', { query: `select=${COLUNAS_CORRETOR},senha_hash,whatsapp_token&order=nome.asc` })
       return linhas.map(paraCorretor)
     },
+    async obterCorretorPorTokenWhatsapp(token) {
+      const linhas = await rest<CorretorLinha[]>('corretores', {
+        query: `select=${COLUNAS_CORRETOR},senha_hash,whatsapp_token&whatsapp_token=eq.${q(token)}&limit=1`,
+      })
+      return linhas[0] ? paraCorretor(linhas[0]) : null
+    },
+    async obterPonteDoCorretor(id) {
+      const linhas = await rest<{ whatsapp_token: string | null; whatsapp_ponte_url: string | null }[]>('corretores', {
+        query: `select=whatsapp_token,whatsapp_ponte_url&id=eq.${q(id)}&limit=1`,
+      })
+      return { token: linhas[0]?.whatsapp_token ?? null, url: linhas[0]?.whatsapp_ponte_url?.trim().replace(/\/$/, '') || null }
+    },
     async obterCorretor(id) {
-      const linhas = await rest<CorretorLinha[]>('corretores', { query: `select=${COLUNAS_CORRETOR},senha_hash&id=eq.${q(id)}&limit=1` })
+      const linhas = await rest<CorretorLinha[]>('corretores', { query: `select=${COLUNAS_CORRETOR},senha_hash,whatsapp_token&id=eq.${q(id)}&limit=1` })
       return linhas[0] ? paraCorretor(linhas[0]) : null
     },
     async obterCorretorPorUsuario(usuario) {
       const linhas = await rest<CorretorLinha[]>('corretores', {
-        query: `select=${COLUNAS_CORRETOR},senha_hash&usuario=eq.${q(usuario.trim().toLowerCase())}&limit=1`,
+        query: `select=${COLUNAS_CORRETOR},senha_hash,whatsapp_token&usuario=eq.${q(usuario.trim().toLowerCase())}&limit=1`,
       })
       return linhas[0] ? { ...paraCorretor(linhas[0]), senha_hash: linhas[0].senha_hash } : null
     },

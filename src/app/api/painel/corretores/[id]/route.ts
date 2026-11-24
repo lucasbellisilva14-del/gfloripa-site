@@ -2,6 +2,7 @@ import { type NextRequest } from 'next/server'
 import { getDb } from '@/lib/painel/db'
 import { esquecerCacheAtivo, exigirGestor } from '@/lib/painel/sessao'
 import { gerarHashSenha, gerarSenhaTemporaria, validarForcaSenha } from '@/lib/painel/senha'
+import { gerarTokenPonte } from '@/lib/painel/whatsapp-token'
 import type { PatchCorretor } from '@/lib/painel/tipos'
 
 // Gestor edita um corretor: nome, e-mail, papel, ativo, id Jetimob e senha.
@@ -22,6 +23,9 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     jetimob_id?: number | string | null
     nova_senha?: string
     gerar_senha?: boolean
+    gerar_token_whatsapp?: boolean
+    revogar_token_whatsapp?: boolean
+    whatsapp_ponte_url?: string | null
   }
   try {
     body = await request.json()
@@ -44,6 +48,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (souEu && patch.ativo === false) return Response.json({ error: 'Você não pode desativar o seu próprio acesso.' }, { status: 400 })
   if (souEu && patch.papel === 'corretor') return Response.json({ error: 'Você não pode deixar de ser gestor pela própria conta.' }, { status: 400 })
 
+  // ponte do WhatsApp: o token aparece uma vez só na resposta
+  let tokenWhatsapp: string | null = null
+  if (body.gerar_token_whatsapp) {
+    tokenWhatsapp = gerarTokenPonte()
+    patch.whatsapp_token = tokenWhatsapp
+  } else if (body.revogar_token_whatsapp) {
+    patch.whatsapp_token = null
+  }
+  if (body.whatsapp_ponte_url !== undefined) {
+    const u = String(body.whatsapp_ponte_url ?? '').trim().replace(/\/$/, '')
+    if (u && !/^https?:\/\/[^\s]+$/.test(u)) return Response.json({ error: 'Endereço da ponte inválido: use http(s)://...' }, { status: 400 })
+    patch.whatsapp_ponte_url = u || null
+  }
+
   let temporaria: string | null = null
   if (body.gerar_senha) {
     temporaria = gerarSenhaTemporaria()
@@ -61,7 +79,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const corretor = await db.atualizarCorretor(id, patch)
     if (!corretor) return Response.json({ error: 'Corretor não encontrado' }, { status: 404 })
     if (patch.ativo !== undefined) esquecerCacheAtivo(id) // bloqueio vale na hora
-    return Response.json({ ok: true, corretor, senha_temporaria: temporaria })
+    return Response.json({ ok: true, corretor, senha_temporaria: temporaria, token_whatsapp: tokenWhatsapp })
   } catch (err) {
     return Response.json({ error: `Não foi possível salvar: ${(err as Error).message}` }, { status: 503 })
   }

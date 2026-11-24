@@ -12,14 +12,14 @@ import { exigirTokenPonte } from '@/lib/painel/whatsapp-token'
 const MAX_BYTES = 256 * 1024
 
 export async function GET(request: NextRequest) {
-  const auth = exigirTokenPonte(request)
+  const auth = await exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
   const db = await getDb()
   return Response.json({ dados: await db.obterSessaoWhatsapp(auth.corretor.id) })
 }
 
 export async function PUT(request: NextRequest) {
-  const auth = exigirTokenPonte(request)
+  const auth = await exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
   const tamanho = Number(request.headers.get('content-length') ?? 0)
   if (tamanho > MAX_BYTES) {
@@ -42,7 +42,7 @@ export async function PUT(request: NextRequest) {
 // Usado quando o WhatsApp encerra a sessão (logout pelo celular): limpa as
 // credenciais para o próximo início pedir um QR novo.
 export async function DELETE(request: NextRequest) {
-  const auth = exigirTokenPonte(request)
+  const auth = await exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
   const db = await getDb()
   await db.apagarSessaoWhatsapp(auth.corretor.id)

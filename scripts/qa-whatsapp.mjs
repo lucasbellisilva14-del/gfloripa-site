@@ -161,5 +161,33 @@ b = await r.json()
 ok(r.ok && b.chat?.nome === 'Roberto Comprador', 'Renomear pela tela')
 await fetch(`${BASE}/api/painel/whatsapp/chat`, { method: 'PATCH', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ chat_id: c3.id, arquivado: true }) })
 
+// 10. um WhatsApp por corretor: o gestor gera o token do Murilo; mensagens
+// com esse token caem na carteira dele, e o token revogado deixa de valer
+r = await fetch(`${BASE}/api/painel/corretores/1001`, { method: 'PATCH', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ gerar_token_whatsapp: true, whatsapp_ponte_url: '' }) })
+b = await r.json()
+const tokenMurilo = b.token_whatsapp
+ok(r.ok && /^[a-f0-9]{64}$/.test(tokenMurilo ?? ''), 'gestor gera o token do WhatsApp de um corretor')
+ok(b.corretor?.tem_token_whatsapp === true && !('whatsapp_token' in (b.corretor ?? {})), 'resposta diz que há token sem expor o valor')
+const chatMurilo = `55549${String(Date.now() + 11).slice(-7)}@s.whatsapp.net`
+r = await fetch(`${BASE}/api/painel/whatsapp/entrada`, { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${tokenMurilo}` }, body: JSON.stringify({ meu_nome: 'Murilo', mensagens: [{ wa_chat_id: chatMurilo, wa_id: `${sufixo}-m1`, direcao: 'entrada', nome: 'Cliente do Murilo', autor: 'Cliente do Murilo', texto: 'Oi Murilo, tem apê de 2 quartos?', data: new Date(base + 60000).toISOString() }] }) })
+b = await r.json()
+ok(r.ok && b.novas === 1, `mensagem com o token do corretor é aceita (novas=${b.novas})`)
+r = await fetch(`${BASE}/api/painel/whatsapp/chat`, { headers: { cookie } })
+b = await r.json()
+ok(!(b.chats ?? []).some((c) => c.wa_chat_id === chatMurilo), 'a conversa NÃO aparece na lista do gestor')
+r = await fetch(`${BASE}/api/painel/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ usuario: 'murilo', senha: process.env.PAINEL_SENHA ? '' : 'demo' }) })
+const cookieMurilo = (r.headers.getSetCookie?.() ?? []).map((c) => c.split(';')[0]).join('; ')
+if (r.ok) {
+  r = await fetch(`${BASE}/api/painel/whatsapp/chat`, { headers: { cookie: cookieMurilo } })
+  b = await r.json()
+  ok((b.chats ?? []).some((c) => c.wa_chat_id === chatMurilo), 'a conversa aparece na lista do Murilo')
+} else {
+  ok(true, 'login do Murilo pulado (senha não é demo)')
+}
+r = await fetch(`${BASE}/api/painel/corretores/1001`, { method: 'PATCH', headers: { 'content-type': 'application/json', cookie }, body: JSON.stringify({ revogar_token_whatsapp: true }) })
+ok(r.ok, 'gestor revoga o token')
+r = await fetch(`${BASE}/api/painel/whatsapp/comando`, { headers: { authorization: `Bearer ${tokenMurilo}` } })
+ok(r.status === 401, `token revogado é recusado (${r.status})`)
+
 console.log(falhas ? `\n${falhas} falha(s)` : '\nTudo OK')
 process.exit(falhas ? 1 : 0)

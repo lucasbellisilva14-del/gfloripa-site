@@ -8,7 +8,7 @@ const STATUS: StatusWhatsapp[] = ['desconectado', 'aguardando_qr', 'conectando',
 
 // A ponte publica aqui o status da conexão e o QR; o painel só lê.
 export async function POST(request: NextRequest) {
-  const auth = exigirTokenPonte(request)
+  const auth = await exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
   let body: {
     status?: string

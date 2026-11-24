@@ -9,7 +9,7 @@ const MAX_TEXTO = 8000
 // Recebe mensagens do serviço ponte. Autenticada por token, não por cookie:
 // o proxy libera esta rota e a verificação acontece aqui.
 export async function POST(request: NextRequest) {
-  const auth = exigirTokenPonte(request)
+  const auth = await exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
 
   let body: { mensagens?: unknown; meu_nome?: unknown }
