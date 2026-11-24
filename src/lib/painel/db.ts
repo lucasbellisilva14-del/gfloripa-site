@@ -107,6 +107,9 @@ export interface PainelDb {
   obterCorretorPorUsuario(usuario: string): Promise<(Corretor & { senha_hash: string | null }) | null>
   criarCorretor(input: NovoCorretor): Promise<Corretor>
   atualizarCorretor(id: number, patch: PatchCorretor): Promise<Corretor | null>
+  // ponte do WhatsApp por corretor: o token identifica a instância dele
+  obterCorretorPorTokenWhatsapp(token: string): Promise<Corretor | null>
+  obterPonteDoCorretor(id: number): Promise<{ token: string | null; url: string | null }>
 
   listarClientes(corretorId?: number): Promise<Cliente[]>
   obterCliente(id: string): Promise<Cliente | null>

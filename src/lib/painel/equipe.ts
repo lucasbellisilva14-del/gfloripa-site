@@ -4,7 +4,7 @@
 // dados que o painel já guarda; nada de chamada à I.A. aqui.
 
 import type { PainelDb } from './db'
-import type { Analise, Cliente, Corretor, Estagio } from './tipos'
+import type { Analise, Cliente, Corretor, Estagio, StatusWhatsapp } from './tipos'
 import { ESTAGIOS } from './tipos'
 import { classificarLembrete } from './formato'
 
@@ -30,6 +30,8 @@ export type ResumoCorretor = {
   funil: Record<Estagio, number>
   pontosFortes: Frequencia[]
   faltou: Frequencia[]
+  // ponte do WhatsApp: null = sem token; senão o último status informado
+  whatsapp: { status: StatusWhatsapp; vivo: boolean } | null
 }
 
 export type AlertaEquipe = {
@@ -102,7 +104,7 @@ function funilVazio(): Record<Estagio, number> {
 // Corretor que só aparece nos dados (sem linha na tabela corretores).
 function sintetico(id: number): Corretor {
   const agora = new Date(0).toISOString()
-  return { id, usuario: `#${id}`, nome: `Corretor #${id}`, email: null, papel: 'corretor', jetimob_id: null, ativo: true, tem_senha: false, criado_em: agora, atualizado_em: agora }
+  return { id, usuario: `#${id}`, nome: `Corretor #${id}`, email: null, papel: 'corretor', jetimob_id: null, ativo: true, tem_senha: false, tem_token_whatsapp: false, whatsapp_ponte_url: null, criado_em: agora, atualizado_em: agora }
 }
 
 const ehQuente = (c: Cliente) => c.temperatura === 'quente' || c.temperatura === 'muito_quente'
@@ -114,6 +116,11 @@ export async function montarVisaoEquipe(db: PainelDb, agora = new Date()): Promi
     db.listarAnalisesRecentes(null, 1000),
     db.listarLembretes({ status: 'pendente' }),
   ])
+  const estadosWa = new Map(
+    await Promise.all(
+      corretores.map(async (c) => [c.id, await db.obterEstadoWhatsapp(c.id).catch(() => null)] as const)
+    )
+  )
 
   const porId = new Map(corretores.map((c) => [c.id, c]))
   for (const id of new Set([...clientes.map((c) => c.corretor_id), ...analises.map((a) => a.corretor_id)])) {
@@ -152,8 +159,13 @@ export async function montarVisaoEquipe(db: PainelDb, agora = new Date()): Promi
       alertas.push({ tipo: 'sem_atividade', corretor: corretor.nome, texto: 'Sem análise nem interação registrada nos últimos 7 dias' })
     }
 
+    const estadoWa = estadosWa.get(corretor.id) ?? null
+    const temPonte = corretor.tem_token_whatsapp || (corretor.id === 77723 && Boolean(process.env.PAINEL_WHATSAPP_TOKEN))
     return {
       corretor,
+      whatsapp: temPonte
+        ? { status: estadoWa?.status ?? 'desconectado', vivo: Boolean(estadoWa?.atualizado_em) && agora.getTime() - Date.parse(estadoWa!.atualizado_em) < 95_000 }
+        : null,
       clientes: meus.length,
       quentes: meus.filter(ehQuente).length,
       semAnalise: semAnalise.length,

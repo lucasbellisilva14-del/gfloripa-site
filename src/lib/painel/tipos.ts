@@ -78,6 +78,10 @@ export type Corretor = {
   jetimob_id: number | null
   ativo: boolean
   tem_senha: boolean
+  // a ponte do WhatsApp deste corretor: token gerado pelo gestor (nunca sai
+  // da camada de dados para as telas) e endereço público da instância
+  tem_token_whatsapp: boolean
+  whatsapp_ponte_url: string | null
   criado_em: string
   atualizado_em: string
 }
@@ -99,6 +103,8 @@ export type PatchCorretor = Partial<{
   jetimob_id: number | null
   ativo: boolean
   senha_hash: string | null
+  whatsapp_token: string | null
+  whatsapp_ponte_url: string | null
 }>
 
 export type Cliente = {

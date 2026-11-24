@@ -8,7 +8,7 @@ import { iaDisponivel } from '@/lib/painel/analise'
 import RelatorioEquipe from '@/components/painel/RelatorioEquipe'
 import { TemperaturaBadge, EstagioBadge, TipoBadge } from '@/components/painel/Badges'
 import { formatarData, formatarUsd, iniciais, tempoRelativo } from '@/lib/painel/formato'
-import { ESTAGIOS, ROTULO_ESTAGIO, ROTULO_TEMPERATURA } from '@/lib/painel/tipos'
+import { ESTAGIOS, ROTULO_ESTAGIO, ROTULO_STATUS_WHATSAPP, ROTULO_TEMPERATURA } from '@/lib/painel/tipos'
 
 // Painel do gestor: visão da equipe inteira, somente leitura. As fichas e
 // análises dos outros corretores abrem em modo de visualização.
@@ -63,7 +63,7 @@ export default async function EquipePage({ searchParams }: { searchParams: Promi
       <section className="p-card" style={{ marginBottom: 16 }}>
         <div className="p-card-head"><h2>Por corretor</h2><span className="p-small p-muted">clique no nome para filtrar as listas abaixo</span></div>
         <table className="p-table" data-teste="equipe-corretores">
-          <thead><tr><th>Corretor</th><th>Clientes</th><th>Quentes</th><th>Análises (semana / total)</th><th>Atendimento</th><th>Lembretes</th><th>Última atividade</th></tr></thead>
+          <thead><tr><th>Corretor</th><th>Clientes</th><th>Quentes</th><th>Análises (semana / total)</th><th>Atendimento</th><th>Lembretes</th><th>WhatsApp</th><th>Última atividade</th></tr></thead>
           <tbody>
             {visao.porCorretor.map((r) => (
               <tr key={r.corretor.id} style={{ opacity: r.corretor.ativo ? 1 : 0.55, background: selecionado?.corretor.id === r.corretor.id ? 'rgba(232,178,58,.08)' : undefined }}>
@@ -88,6 +88,13 @@ export default async function EquipePage({ searchParams }: { searchParams: Promi
                   )}
                 </td>
                 <td data-rotulo="Lembretes">{r.lembretesPendentes}{r.lembretesAtrasados ? <span className="p-small" style={{ color: 'var(--p-danger)' }}> · {r.lembretesAtrasados} atrasado(s)</span> : null}</td>
+                <td data-rotulo="WhatsApp">
+                  {!r.whatsapp ? <span className="p-muted">sem ponte</span> : (
+                    <span className={`p-badge ${r.whatsapp.status === 'conectado' && r.whatsapp.vivo ? 'p-badge-ok' : r.whatsapp.status === 'conectado' ? 'p-badge-warn' : 'p-badge-neutro'}`}>
+                      {ROTULO_STATUS_WHATSAPP[r.whatsapp.status]}{r.whatsapp.status === 'conectado' && !r.whatsapp.vivo ? ' (sem sinal)' : ''}
+                    </span>
+                  )}
+                </td>
                 <td data-rotulo="Última atividade" className="p-muted">{tempoRelativo(r.ultimaAtividade)}</td>
               </tr>
             ))}

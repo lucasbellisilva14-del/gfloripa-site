@@ -12,6 +12,7 @@ export default function EquipeEditor({ corretores, meuId, jetimob }: { corretore
   const router = useRouter()
   const [erro, setErro] = useState<string | null>(null)
   const [aviso, setAviso] = useState<{ usuario: string; senha: string } | null>(null)
+  const [tokenMostrado, setTokenMostrado] = useState<{ usuario: string; token: string } | null>(null)
   const [ocupado, setOcupado] = useState<number | 'novo' | null>(null)
   const [novo, setNovo] = useState({ usuario: '', nome: '', papel: 'corretor' })
   const [mostrarNovo, setMostrarNovo] = useState(false)
@@ -27,7 +28,7 @@ export default function EquipeEditor({ corretores, meuId, jetimob }: { corretore
         return null
       }
       router.refresh()
-      return dados as { corretor?: Corretor; senha_temporaria?: string | null }
+      return dados as { corretor?: Corretor; senha_temporaria?: string | null; token_whatsapp?: string | null }
     } finally {
       setOcupado(null)
     }
@@ -49,6 +50,23 @@ export default function EquipeEditor({ corretores, meuId, jetimob }: { corretore
 
   async function alternarPapel(c: Corretor) {
     await chamar(`/api/painel/corretores/${c.id}`, 'PATCH', { papel: c.papel === 'gestor' ? 'corretor' : 'gestor' }, c.id)
+  }
+
+  async function gerarTokenWhatsapp(c: Corretor) {
+    if (c.tem_token_whatsapp && !window.confirm(`Gerar um token novo para ${c.nome}? O atual deixa de valer e a instância da ponte dele precisa ser atualizada.`)) return
+    const r = await chamar(`/api/painel/corretores/${c.id}`, 'PATCH', { gerar_token_whatsapp: true }, c.id)
+    if (r?.token_whatsapp) setTokenMostrado({ usuario: c.usuario, token: r.token_whatsapp })
+  }
+
+  async function revogarTokenWhatsapp(c: Corretor) {
+    if (!window.confirm(`Revogar o token do WhatsApp de ${c.nome}? A ponte dele para de entregar mensagens até ter um token novo.`)) return
+    await chamar(`/api/painel/corretores/${c.id}`, 'PATCH', { revogar_token_whatsapp: true }, c.id)
+  }
+
+  async function definirPonteUrl(c: Corretor) {
+    const u = window.prompt(`Endereço público da instância da ponte de ${c.nome} (Railway, Networking, Generate Domain). Deixe em branco para usar só a fila.`, c.whatsapp_ponte_url ?? '')
+    if (u === null) return
+    await chamar(`/api/painel/corretores/${c.id}`, 'PATCH', { whatsapp_ponte_url: u.trim() }, c.id)
   }
 
   async function ligarJetimob(c: Corretor, valor: string) {
@@ -73,6 +91,12 @@ export default function EquipeEditor({ corretores, meuId, jetimob }: { corretore
           <button type="button" className="p-btn p-btn-sm p-btn-ghost" style={{ marginLeft: 10 }} onClick={() => setAviso(null)}>Fechar</button>
         </div>
       )}
+      {tokenMostrado && (
+        <div className="p-alert p-alert-info" data-teste="token-gerado">
+          Token do WhatsApp de <strong>{tokenMostrado.usuario}</strong>: <code style={{ fontSize: 13, userSelect: 'all', wordBreak: 'break-all' }}>{tokenMostrado.token}</code>. Ele não aparece de novo. No Railway, coloque na variável <code>PAINEL_WHATSAPP_TOKEN</code> da instância da ponte desse corretor (ver docs/painel/whatsapp.md).
+          <button type="button" className="p-btn p-btn-sm p-btn-ghost" style={{ marginLeft: 10 }} onClick={() => setTokenMostrado(null)}>Fechar</button>
+        </div>
+      )}
       {erro && <div className="p-alert p-alert-danger">{erro}</div>}
       <ul className="p-list" data-teste="equipe">
         {corretores.map((c) => (
@@ -84,6 +108,7 @@ export default function EquipeEditor({ corretores, meuId, jetimob }: { corretore
                 {c.id === meuId ? ' (você)' : ''}
                 {!c.ativo ? ' · desativado' : ''}
                 {!c.tem_senha ? ' · sem senha' : ''}
+                {c.tem_token_whatsapp ? ` · WhatsApp${c.whatsapp_ponte_url ? ' (direto)' : ' (fila)'}` : ' · sem WhatsApp'}
               </div>
             </div>
             <div className="p-row" style={{ gap: 6, flexWrap: 'wrap' }}>
@@ -100,6 +125,19 @@ export default function EquipeEditor({ corretores, meuId, jetimob }: { corretore
               <button type="button" className="p-btn p-btn-sm" disabled={ocupado === c.id} onClick={() => definirSenha(c)}>
                 {c.tem_senha ? 'Nova senha' : 'Definir senha'}
               </button>
+              <button type="button" className="p-btn p-btn-sm p-btn-ghost" disabled={ocupado === c.id} onClick={() => gerarTokenWhatsapp(c)} title="Token da instância da ponte do WhatsApp deste corretor">
+                {c.tem_token_whatsapp ? 'Novo token WhatsApp' : 'Token WhatsApp'}
+              </button>
+              {c.tem_token_whatsapp && (
+                <>
+                  <button type="button" className="p-btn p-btn-sm p-btn-ghost" disabled={ocupado === c.id} onClick={() => definirPonteUrl(c)} title="Endereço público da instância, para a tela agir na hora">
+                    Endereço da ponte
+                  </button>
+                  <button type="button" className="p-btn p-btn-sm p-btn-ghost" disabled={ocupado === c.id} onClick={() => revogarTokenWhatsapp(c)}>
+                    Revogar WhatsApp
+                  </button>
+                </>
+              )}
               {c.id !== meuId && (
                 <>
                   <button type="button" className="p-btn p-btn-sm p-btn-ghost" disabled={ocupado === c.id} onClick={() => alternarPapel(c)}>
@@ -140,7 +178,7 @@ export default function EquipeEditor({ corretores, meuId, jetimob }: { corretore
         </div>
       )}
       <p className="p-small p-muted" style={{ margin: 0 }}>
-        Cada corretor vê só os próprios clientes, análises e lembretes. O WhatsApp conectado ao painel é o do gestor padrão. Usuário sem senha definida não consegue entrar.
+        Cada corretor vê só os próprios clientes, análises e lembretes. Cada um pode ter o próprio WhatsApp conectado: gere o token aqui e suba uma instância da ponte com ele. Usuário sem senha definida não consegue entrar.
       </p>
     </div>
   )

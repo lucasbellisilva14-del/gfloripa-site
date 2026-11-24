@@ -8,7 +8,7 @@ const MAX_POR_LOTE = 300
 // biblioteca os entrega. Serve para batizar e corrigir o nome das conversas,
 // inclusive as que ficaram com o nome do próprio corretor por engano.
 export async function POST(request: NextRequest) {
-  const auth = exigirTokenPonte(request)
+  const auth = await exigirTokenPonte(request)
   if ('erro' in auth) return auth.erro
   let body: { contatos?: unknown; meu_nome?: unknown }
   try {

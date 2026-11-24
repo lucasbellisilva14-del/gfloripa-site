@@ -131,6 +131,32 @@ No Railway, no serviço da ponte: Settings, Volumes, **Add Volume**, caminho
 ali. Sem o volume a ponte funciona, mas a sessão some a cada deploy e o QR
 precisa ser lido de novo; a tela do WhatsApp avisa quando isso acontece.
 
+## Um WhatsApp por corretor
+
+Cada corretor pode conectar o próprio número. A regra é **uma instância da
+ponte por número**, cada uma com o seu token:
+
+1. Em Configurações, Equipe, o gestor clica em **Token WhatsApp** na linha do
+   corretor. O token aparece uma vez; copie.
+2. No Railway, duplique o serviço da ponte (botão direito no cartão, Duplicate)
+   ou crie outro a partir do mesmo repositório com Root Directory
+   `servicos/whatsapp`. Nas variáveis, coloque o token do corretor em
+   `PAINEL_WHATSAPP_TOKEN` e o mesmo `PAINEL_URL`. Crie o Volume (passo 6).
+3. Opcional: Networking, Generate Domain, e cole o endereço em **Endereço da
+   ponte** na Equipe. Com ele a tela do corretor age na hora; sem ele, pela
+   fila, em até 30 segundos.
+4. O corretor abre a tela WhatsApp do painel e lê o QR com o celular dele.
+
+As mensagens entram na carteira de quem tem o token; o gestor vê o status de
+cada ponte na coluna WhatsApp da tela Equipe. **Revogar WhatsApp** derruba a
+instância na hora (ela passa a receber 401) e **Novo token** troca o segredo.
+
+Sobre o risco de bloqueio: cinco números da mesma imobiliária saindo da mesma
+hospedagem parecem, para o WhatsApp, um escritório com cinco pessoas no
+WhatsApp Web, o que é normal. O que evitar: parear todos no mesmo dia (um
+por dia), reconectar em ciclo (a ponte já espaça as tentativas) e, acima de
+tudo, enviar mensagens (a ponte nunca envia).
+
 ## Consumo na Vercel
 
 Tudo que a ponte manda ao painel passa pelas funções da Vercel e conta como

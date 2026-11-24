@@ -160,6 +160,9 @@ node scripts/qa-painel.mjs   # fluxo das telas; servidor no ar, em modo demo
 node scripts/qa-whatsapp.mjs # ponte do WhatsApp; precisa de PAINEL_WHATSAPP_TOKEN
 ```
 
+Migration mais recente: `20261124120000_painel_whatsapp_por_corretor.sql`
+(token e endereço da ponte por corretor).
+
 ## Aplicar as migrations no Supabase
 
 1. Crie um projeto em https://supabase.com (ou use o existente).

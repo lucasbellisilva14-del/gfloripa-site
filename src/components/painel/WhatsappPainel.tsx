@@ -287,7 +287,7 @@ export default function WhatsappPainel(p: Props) {
 
         {situacao === 'nao_configurado' && (
           <div className="p-alert p-alert-warn">
-            A ponte ainda não foi configurada. Falta a variável <code>PAINEL_WHATSAPP_TOKEN</code> na Vercel e no serviço. O passo a passo está em <code>docs/painel/whatsapp.md</code>.
+            A ponte do seu número ainda não foi configurada: falta o token (gerado pelo gestor em Configurações, Equipe) e uma instância do serviço com ele. O passo a passo está em <code>docs/painel/whatsapp.md</code>.
           </div>
         )}
 

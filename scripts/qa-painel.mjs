@@ -252,7 +252,7 @@ ok(r404?.status() === 404, `cliente do gestor não abre para outro corretor (${r
 await p2.goto(`${BASE}/painel/configuracoes`)
 ok((await p2.locator('[data-teste=equipe]').count()) === 0, 'corretor comum não vê a Equipe')
 await p2.goto(`${BASE}/painel/whatsapp`)
-ok(await p2.isVisible('[data-teste=whatsapp-outro-corretor]'), 'WhatsApp avisa que a conexão é do gestor')
+ok(await p2.isVisible('[data-teste=whatsapp-sem-token]'), 'WhatsApp avisa que o corretor ainda não tem ponte')
 await ctx2.close()
 
 await page.goto(`${BASE}/painel/configuracoes`)

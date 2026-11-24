@@ -10,7 +10,7 @@ import { agoraIso, novoId, normalizarTelefone, ordenarClientes } from './db'
 import type { Analise, ChatWhatsapp, Cliente, Conversa, Corretor, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemWhatsapp } from './tipos'
 import { corretoresDemo, dadosDemo } from './demo'
 
-type CorretorLinha = Corretor & { senha_hash: string | null }
+type CorretorLinha = Corretor & { senha_hash: string | null; whatsapp_token?: string | null }
 
 type Estado = {
   corretores?: CorretorLinha[]
@@ -50,8 +50,8 @@ async function salvar(estado: Estado): Promise<void> {
 
 // A lista pública nunca carrega o hash; só diz se há senha.
 function semHash(l: CorretorLinha): Corretor {
-  const { senha_hash, ...resto } = l
-  return { ...resto, tem_senha: Boolean(senha_hash) }
+  const { senha_hash, whatsapp_token, ...resto } = l
+  return { ...resto, tem_senha: Boolean(senha_hash), tem_token_whatsapp: Boolean(whatsapp_token), whatsapp_ponte_url: l.whatsapp_ponte_url ?? null }
 }
 
 export async function criarDbMemoria(): Promise<PainelDb> {
@@ -89,6 +89,9 @@ export async function criarDbMemoria(): Promise<PainelDb> {
         ativo: true,
         tem_senha: Boolean(input.senha_hash),
         senha_hash: input.senha_hash,
+        tem_token_whatsapp: false,
+        whatsapp_token: null,
+        whatsapp_ponte_url: null,
         criado_em: agora,
         atualizado_em: agora,
       }
@@ -102,6 +105,14 @@ export async function criarDbMemoria(): Promise<PainelDb> {
       Object.assign(l, patch, { atualizado_em: agoraIso() })
       await persistir()
       return semHash(l)
+    },
+    async obterCorretorPorTokenWhatsapp(token) {
+      const l = (estado.corretores ?? []).find((c) => c.whatsapp_token && c.whatsapp_token === token)
+      return l ? semHash(l) : null
+    },
+    async obterPonteDoCorretor(id) {
+      const l = (estado.corretores ?? []).find((c) => c.id === id)
+      return { token: l?.whatsapp_token ?? null, url: l?.whatsapp_ponte_url?.trim().replace(/\/$/, '') || null }
     },
 
     async listarClientes(corretorId) {

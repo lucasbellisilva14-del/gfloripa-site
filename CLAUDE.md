@@ -58,9 +58,12 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
   bloqueio de número. A sessão do WhatsApp fica em disco no serviço (Volume
   do Railway), NUNCA no painel: reenviá-la à Vercel estourou o Fast Origin
   Transfer da conta em 11/2026. Ver docs/painel/whatsapp.md.
+- Um WhatsApp por corretor: cada um tem token próprio (corretores.whatsapp_token,
+  gerado em Configurações > Equipe) e roda a própria instância da ponte;
+  PAINEL_WHATSAPP_TOKEN segue valendo para o gestor padrão.
 - A tela do WhatsApp comanda o serviço (reconectar, parear de novo, pulso):
-  direto se WHATSAPP_PONTE_URL estiver na Vercel, senão por fila que o serviço
-  consulta a cada 5 s. O serviço manda pulso a cada 30 s com diagnóstico e
+  direto se o corretor tiver whatsapp_ponte_url (ou WHATSAPP_PONTE_URL para o
+  padrão), senão por fila que o serviço consulta a cada 30 s. O serviço manda pulso a cada 30 s com diagnóstico e
   versão; a tela acusa quando ele some. No deploy, a instância substituída
   encerra em vez de reconectar (duas disputariam a sessão).
 - Testes: npm test (validador, filtros e situação), node scripts/qa-painel.mjs
