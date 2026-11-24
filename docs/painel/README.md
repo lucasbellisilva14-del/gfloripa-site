@@ -119,6 +119,7 @@ Environment Variables (variável nova exige Redeploy).
 
 | Variável | Obrigatória | Descrição |
 | --- | --- | --- |
+| `PAINEL_HOST` | não | Host do painel quando ele roda fora da Vercel (ex.: `painel.nagamboaimoveis.com.br`). Com ela, o site redireciona `/painel` para lá e o host do painel leva `/` ao `/painel`. Ver `hospedagem.md`. |
 | `PAINEL_SENHA` | sim em produção | Senha mestra do gestor padrão (entra sem usuário, ou com o usuário dele). Sem ela, em produção o login fica desabilitado; em dev (ou com `PAINEL_DEMO=1`) a senha `demo` entra para qualquer corretor sem senha definida. |
 | `PAINEL_SESSION_SECRET` | sim em produção | Segredo do HMAC do cookie. Gere com `openssl rand -hex 32`. |
 | `PAINEL_CORRETOR_ID` | não (padrão 77723) | Id do corretor logado no Jetimob. |
