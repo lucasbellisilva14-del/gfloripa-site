@@ -498,12 +498,21 @@ createServer(async (req, res) => {
 
 // --- ciclo de vida ---------------------------------------------------------
 
+// A hospedagem manda SIGTERM a cada deploy, para a instância antiga dar lugar
+// à nova. Encerramos rápido e com código 0: se demorar ou sair por sinal, o
+// Railway marca a instância antiga como "crashed" sem motivo.
 for (const sinal of ['SIGINT', 'SIGTERM']) {
   process.on(sinal, async () => {
     encerrando = true
-    diga('encerrando')
-    await escoarFila().catch(() => {})
-    await publicarEstado({ status: 'desconectado', qr: null, detalhe: 'Serviço encerrado' }).catch(() => {})
+    diga('encerrando (pedido da hospedagem)')
+    const limite = new Promise((r) => setTimeout(r, 3000))
+    await Promise.race([
+      (async () => {
+        await escoarFila().catch(() => {})
+        await publicarEstado({ status: 'desconectado', qr: null, detalhe: 'Serviço reiniciando' }).catch(() => {})
+      })(),
+      limite,
+    ])
     process.exit(0)
   })
 }
