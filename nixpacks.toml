@@ -1,0 +1,13 @@
+# Build do painel no Railway (Nixpacks). O Next.js 16 exige Node 20.9+;
+# sem isto o Railway escolhe uma versão antiga e o build falha.
+[phases.setup]
+nixPkgs = ["nodejs_22"]
+
+[phases.install]
+cmds = ["npm ci"]
+
+[phases.build]
+cmds = ["npm run build"]
+
+[start]
+cmd = "npm run start"
