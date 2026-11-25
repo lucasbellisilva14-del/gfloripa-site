@@ -98,6 +98,16 @@ function buildUrl(path: string): string {
   return `${API_URL}/${API_KEY}${path}`
 }
 
+// Instalação só do painel (Railway, SOMENTE_PAINEL=1): o build compila o site
+// inteiro, mas ninguém acessa o site por lá. Durante o build, as páginas
+// estáticas (home, sitemap) buscariam todos os imóveis na Jetimob, e no
+// ambiente de build do Railway essa chamada não responde a tempo e derruba
+// o build. Nesse caso o build segue com listas vazias; em execução (o
+// painel, Meus imóveis, imóveis de interesse) a Jetimob é consultada normal.
+function semJetimobNoBuild(): boolean {
+  return process.env.SOMENTE_PAINEL === '1' && process.env.NEXT_PHASE === 'phase-production-build'
+}
+
 export async function getProperties(params?: {
   page?: number
   pageSize?: number
@@ -126,6 +136,7 @@ function slimProperty(p: Property): Property {
 }
 
 async function fetchAllProperties(): Promise<Property[]> {
+  if (semJetimobNoBuild()) return []
   const first = await getProperties({ page: 1, pageSize: 500 })
   const all = [...(first.data ?? [])]
   let page = first.page
@@ -154,6 +165,7 @@ export async function getAllProperties(): Promise<Property[]> {
 }
 
 export async function getActivePropertyIds(): Promise<string[]> {
+  if (semJetimobNoBuild()) return []
   const res = await fetch(buildUrl('/imoveis-ativos'), { next: { revalidate: 60 } })
   if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
   return res.json()
@@ -172,6 +184,7 @@ export async function getProperty(code: string): Promise<Property | null> {
 
 export const getCondominios = unstable_cache(
   async (): Promise<Condominio[]> => {
+    if (semJetimobNoBuild()) return []
     const res = await fetch(buildUrl('/condominios?v=6&pageSize=500'))
     if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
     const body = await res.json()
@@ -245,6 +258,7 @@ export async function getCondominioByCodigo(codigo: string): Promise<Condominio 
 
 export const getCorretores = unstable_cache(
   async (): Promise<Corretor[]> => {
+    if (semJetimobNoBuild()) return []
     const res = await fetch(buildUrl('/corretores'))
     if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
     return res.json()

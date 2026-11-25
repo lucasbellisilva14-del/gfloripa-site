@@ -28,7 +28,9 @@ variável, nada muda, e é assim que o ambiente local roda.
    `PAINEL_ANTHROPIC_MODEL`, `JETIMOB_API_URL`, `JETIMOB_API_KEY`,
    `JETIMOB_PUBLIC_KEY`, `JETIMOB_PRIVATE_KEY`, `JETIMOB_LEAD_ORIGEM_ID`,
    `WHATSAPP_PONTE_URL`, `WHATSAPP_HOSPEDAGEM_URL`. Acrescente
-   `PAINEL_HOST=painel.nagamboaimoveis.com.br`.
+   `PAINEL_HOST=painel.nagamboaimoveis.com.br` e `SOMENTE_PAINEL=1` (o build
+   pula a busca de imóveis na Jetimob, que no Railway não responde a tempo e
+   derrubava o build; em execução a Jetimob é consultada normalmente).
 3. **Settings, Networking, Custom Domain**: `painel.nagamboaimoveis.com.br`.
    O Railway mostra o registro CNAME para criar no DNS do domínio (onde o
    domínio é administrado, normalmente o registrador). Crie e espere
