@@ -6,7 +6,7 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 import type { PainelDb, PatchEstadoWhatsapp } from './db'
-import { agoraIso, novoId, normalizarTelefone, ordenarClientes } from './db'
+import { LIMITE_LISTA_CHATS, agoraIso, novoId, normalizarTelefone, ordenarClientes } from './db'
 import type { Analise, ChatWhatsapp, Cliente, Conversa, Corretor, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemWhatsapp } from './tipos'
 import { corretoresDemo, dadosDemo } from './demo'
 
@@ -329,6 +329,8 @@ export async function criarDbMemoria(): Promise<PainelDb> {
           }
           estado.whatsapp_chats.push(chat)
         }
+        // arquivada = ignorada: contato pessoal não ocupa banco nem análise
+        if (chat.arquivado) continue
         if (estado.whatsapp_mensagens.some((x) => x.chat_id === chat!.id && x.wa_id === m.wa_id)) continue
         estado.whatsapp_mensagens.push({
           id: novoId(),
@@ -371,6 +373,7 @@ export async function criarDbMemoria(): Promise<PainelDb> {
       return (estado.whatsapp_chats ?? [])
         .filter((c) => c.corretor_id === corretorId && (incluirArquivados || !c.arquivado))
         .sort((a, b) => (b.ultima_mensagem_em ?? '').localeCompare(a.ultima_mensagem_em ?? ''))
+        .slice(0, LIMITE_LISTA_CHATS)
     },
     async obterChatWhatsapp(id) {
       return (estado.whatsapp_chats ?? []).find((c) => c.id === id) ?? null

@@ -111,3 +111,13 @@ test('mensagem preparada tem o formato que a rota do painel espera', () => {
   assert.equal(r.mensagem.autor, 'Mariana Costa')
   assert.equal(r.mensagem.data, '2026-11-04T11:59:00.000Z')
 })
+
+test('Meta AI fica de fora e texto longo é cortado', async () => {
+  const { ehConversaDePessoa, prepararMensagem, MAX_TEXTO } = await import('../../servicos/whatsapp/filtros.mjs')
+  assert.equal(ehConversaDePessoa('13135550002@bot'), false)
+  const agora = Date.parse('2026-11-26T12:00:00Z')
+  const longo = 'x'.repeat(MAX_TEXTO + 500)
+  const r = prepararMensagem({ key: { remoteJid: '5548999990000@s.whatsapp.net', id: 'l1', fromMe: false }, message: { conversation: longo }, messageTimestamp: Math.floor(agora / 1000) - 60 }, { agora })
+  assert.ok(r.mensagem.texto.length <= MAX_TEXTO + 10)
+  assert.ok(r.mensagem.texto.endsWith('[...]'))
+})

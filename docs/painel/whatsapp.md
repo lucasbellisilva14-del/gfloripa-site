@@ -161,8 +161,16 @@ tudo, enviar mensagens (a ponte nunca envia).
 
 Tudo que a ponte manda ao painel passa pelas funções da Vercel e conta como
 Fast Origin Transfer. O que ela manda hoje é pequeno: mensagens de texto em
-lotes (poucos KB), um pulso de 1 KB a cada 30 segundos e uma consulta de
-comandos a cada 30 segundos. Estimativa: menos de 50 MB por mês por número.
+lotes (poucos KB, texto limitado a 4.000 caracteres por mensagem), um pulso
+de 1 KB por minuto e uma consulta de comandos a cada 30 segundos. A agenda de
+contatos vai ao painel uma vez só por número (o que já foi entregue fica
+gravado no volume). Estimativa: menos de 20 MB por mês por número.
+
+O que nunca é capturado: grupos, canais, status, listas de transmissão,
+conversas com a Meta AI, reações e mídia (foto, áudio, documento viram uma
+marcação de texto, como `[áudio]`). Conversa **arquivada** no painel deixa de
+guardar mensagens novas: use para contatos pessoais. A tela lista as 150
+conversas mais recentes.
 
 O que não pode voltar a acontecer: enviar a sessão do WhatsApp ao painel. A
 rota `PUT /api/painel/whatsapp/sessao` recusa corpos acima de 256 KB por

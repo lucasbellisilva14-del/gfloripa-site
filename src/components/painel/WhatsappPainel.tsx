@@ -113,7 +113,8 @@ export default function WhatsappPainel(p: Props) {
   // mesmo temporizador, para a atualização nunca rodar síncrona no efeito.
   const emRajada = pedidoAtivo !== null && agora !== 0 && agora - pedidoAtivo.em < RAJADA_MS
   useEffect(() => {
-    const intervalo = emRajada ? 1000 : situacao === 'conectado' ? 10000 : 2000
+    // conectado e estável: a cada 20 s basta; a lista de conversas não muda tão rápido
+    const intervalo = emRajada ? 1000 : situacao === 'conectado' ? 20000 : 2000
     const ciclo = (atraso: number) => {
       timer.current = setTimeout(async () => {
         // aba em segundo plano: não consulta; volta ao ritmo quando reaparecer
@@ -240,6 +241,7 @@ export default function WhatsappPainel(p: Props) {
   }
 
   async function arquivar(chat: ChatWhatsapp) {
+    if (!window.confirm(`Arquivar ${chat.nome ?? chat.telefone ?? 'esta conversa'}? Ela sai da lista e as mensagens novas dela deixam de ser guardadas. Use para contatos pessoais, que não são clientes.`)) return
     await fetch('/api/painel/whatsapp/chat', {
       method: 'PATCH',
       headers: { 'content-type': 'application/json' },
@@ -311,7 +313,7 @@ export default function WhatsappPainel(p: Props) {
             {servicoMorto && (
               <div className="p-alert p-alert-danger" style={{ marginBottom: 12 }}>
                 <strong>O serviço não está respondendo.</strong> Nenhuma das duas vias deu sinal: nem o endereço direto, nem o
-                sinal de vida que ele manda a cada 30 segundos. Os botões deixam o pedido na fila, mas ele só executa quando o
+                sinal de vida que ele manda a cada minuto. Os botões deixam o pedido na fila, mas ele só executa quando o
                 serviço voltar. Reinicie na hospedagem{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''} e veja os registros: a causa costuma estar na última linha.
               </div>
             )}
@@ -327,7 +329,7 @@ export default function WhatsappPainel(p: Props) {
             {desatualizado && (
               <div className="p-alert p-alert-danger" style={{ marginBottom: 12 }}>
                 <strong>O serviço está rodando uma versão antiga.</strong> Ele responde, mas sem número de versão e sem o
-                diagnóstico que as versões atuais mandam a cada 30 segundos. Isso quer dizer que a hospedagem não reconstruiu o
+                diagnóstico que as versões atuais mandam a cada minuto. Isso quer dizer que a hospedagem não reconstruiu o
                 serviço depois dos últimos deploys. Essa versão antiga ainda tem o defeito que descarta as mensagens que você
                 envia do celular. No Railway{p.hospedagemUrl ? <> (<a href={p.hospedagemUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'underline' }}>abrir</a>)</> : ''}: aba
                 Deployments, confira a data da última implantação; use <strong>Redeploy</strong> e, se falhar, leia o registro do

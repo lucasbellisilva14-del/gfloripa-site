@@ -65,7 +65,7 @@ Objetivo: autoridade da marca e tráfego pago no Google Ads.
   PAINEL_WHATSAPP_TOKEN segue valendo para o gestor padrão.
 - A tela do WhatsApp comanda o serviço (reconectar, parear de novo, pulso):
   direto se o corretor tiver whatsapp_ponte_url (ou WHATSAPP_PONTE_URL para o
-  padrão), senão por fila que o serviço consulta a cada 30 s. O serviço manda pulso a cada 30 s com diagnóstico e
+  padrão), senão por fila que o serviço consulta a cada 30 s. O serviço manda pulso a cada 60 s com diagnóstico e
   versão; a tela acusa quando ele some. No deploy, a instância substituída
   encerra em vez de reconectar (duas disputariam a sessão).
 - Testes: npm test (validador, filtros e situação), node scripts/qa-painel.mjs

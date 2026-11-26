@@ -2,7 +2,7 @@
 // a tela, com a lista de verificações que explica o porquê. Puro e testável.
 //
 // Duas fontes, e a regra de precedência entre elas:
-//   - o pulso gravado no banco (o serviço avisa a cada 30 s pela fila);
+//   - o pulso gravado no banco (o serviço avisa a cada 60 s);
 //   - a saúde direta, quando WHATSAPP_PONTE_URL está configurada.
 // Pulso recente prova que o serviço está vivo mesmo que o endereço direto não
 // responda: nesse caso o problema é o endereço, não o serviço, e a tela deve
@@ -37,8 +37,8 @@ export const ROTULO_SITUACAO: Record<Situacao, string> = {
   nao_configurado: 'Não configurado',
 }
 
-// O serviço manda um pulso a cada 30 s; com três perdidos, consideramos caído.
-export const LIMITE_SEM_PULSO_MS = 95_000
+// O serviço manda um pulso a cada 60 s; com dois perdidos, consideramos caído.
+export const LIMITE_SEM_PULSO_MS = 150_000
 
 export type Entrada = {
   estado: EstadoWhatsapp | null
@@ -110,7 +110,7 @@ export function situacaoWhatsapp(e: Entrada): Leitura {
             : servicoVivo
               ? `${diretoResponde ? 'Respondendo agora' : `Último sinal há ${minutos(msSemPulso ?? 0)}`}${(e.saude?.versao ?? d?.versao) ? `, versão ${e.saude?.versao ?? d?.versao}` : ''}${d?.desde ? `, no ar desde ${horaCurta(d.desde)}` : ''}.`
             : msSemPulso !== null
-              ? `Último sinal há ${minutos(msSemPulso)}; ele avisa a cada 30 segundos.${e.saude?.erro ? ` Endereço direto: ${e.saude.erro}.` : ''}`
+              ? `Último sinal há ${minutos(msSemPulso)}; ele avisa a cada minuto.${e.saude?.erro ? ` Endereço direto: ${e.saude.erro}.` : ''}`
               : e.saude?.erro
                 ? `Não respondeu: ${e.saude.erro}.`
                 : 'Não respondeu.',

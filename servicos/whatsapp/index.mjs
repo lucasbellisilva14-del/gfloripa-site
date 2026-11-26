@@ -23,7 +23,7 @@
 // Opcionais:
 //   PORTA / PORT          porta HTTP (padrão 8080)
 //   INTERVALO_ENVIO_MS    agrupamento de mensagens antes de enviar (padrão 3000)
-//   INTERVALO_PULSO_MS    sinal de vida ao painel (padrão 30000)
+//   INTERVALO_PULSO_MS    sinal de vida ao painel (padrão 60000)
 //   INTERVALO_COMANDO_MS  consulta da fila de comandos (padrão 30000)
 //   SESSAO_DIR            pasta da sessão do WhatsApp (padrão: volume do Railway ou ./.sessao)
 //   JANELA_DIAS           quantos dias para trás aceitar ao conectar (padrão 7)
@@ -47,7 +47,7 @@ const PAINEL_URL = (process.env.PAINEL_URL ?? '').replace(/\/$/, '')
 const TOKEN = process.env.PAINEL_WHATSAPP_TOKEN ?? ''
 const PORTA = Number(process.env.PORTA ?? process.env.PORT ?? 8080)
 const INTERVALO_ENVIO_MS = Number(process.env.INTERVALO_ENVIO_MS ?? 3000)
-const INTERVALO_PULSO_MS = Number(process.env.INTERVALO_PULSO_MS ?? 30000)
+const INTERVALO_PULSO_MS = Number(process.env.INTERVALO_PULSO_MS ?? 60000)
 const INTERVALO_COMANDO_MS = Number(process.env.INTERVALO_COMANDO_MS ?? 30000)
 
 // Onde a sessão do WhatsApp (credenciais e chaves) fica guardada: em disco,
@@ -161,6 +161,7 @@ async function conferirPainel() {
 
 async function apagarSessaoLocal() {
   await fs.rm(SESSAO_DIR, { recursive: true, force: true }).catch(() => {})
+  contatosEnviados = new Map() // número novo: a agenda vai de novo
 }
 
 async function abrirSessao() {
@@ -183,14 +184,37 @@ let meuNome = null
 const contatosPendentes = new Map()
 let envioContatosAgendado = null
 
+// O que já foi entregue ao painel fica gravado no disco da sessão: a cada
+// reinício o WhatsApp manda a agenda inteira de novo, e sem isto ela seria
+// reenviada ao painel em todo deploy.
+const ARQUIVO_CONTATOS = path.join(SESSAO_DIR, 'contatos-enviados.json')
+let contatosEnviados = new Map()
+
+async function carregarContatosEnviados() {
+  try {
+    contatosEnviados = new Map(Object.entries(JSON.parse(await fs.readFile(ARQUIVO_CONTATOS, 'utf8'))))
+  } catch {
+    contatosEnviados = new Map()
+  }
+}
+
+async function gravarContatosEnviados() {
+  try {
+    await fs.mkdir(SESSAO_DIR, { recursive: true })
+    await fs.writeFile(ARQUIVO_CONTATOS, JSON.stringify(Object.fromEntries(contatosEnviados)))
+  } catch (err) {
+    registrarErro(`gravar contatos: ${err.message}`)
+  }
+}
+
 function registrarContatos(lista) {
   for (const c of lista ?? []) {
     const jid = c?.id
     if (!ehConversaDePessoa(jid)) continue
     const nome = (c.name ?? c.notify ?? c.verifiedName ?? '').trim()
     if (!nome) continue
-    if (nomesContatos.get(jid) === nome) continue
     nomesContatos.set(jid, nome)
+    if (contatosEnviados.get(jid) === nome) continue // o painel já sabe
     contatosPendentes.set(jid, nome)
   }
   if (contatosPendentes.size && !envioContatosAgendado) {
@@ -204,7 +228,11 @@ async function enviarContatos() {
   const lote = [...contatosPendentes.entries()].slice(0, 300).map(([wa_chat_id, nome]) => ({ wa_chat_id, nome }))
   try {
     const r = await painel('contatos', { method: 'POST', body: JSON.stringify({ contatos: lote, meu_nome: meuNome }) })
-    for (const c of lote) contatosPendentes.delete(c.wa_chat_id)
+    for (const c of lote) {
+      contatosPendentes.delete(c.wa_chat_id)
+      contatosEnviados.set(c.wa_chat_id, c.nome)
+    }
+    await gravarContatosEnviados()
     if (r?.renomeadas) diga(`${r.renomeadas} conversa(s) renomeada(s) pela agenda`)
     if (contatosPendentes.size) envioContatosAgendado = setTimeout(enviarContatos, 2000)
   } catch (err) {
@@ -525,6 +553,7 @@ process.on('unhandledRejection', (e) => {
 async function iniciar() {
   diga(`ponte versão ${VERSAO} iniciando | painel: ${PAINEL_URL}`)
   await conferirPainel()
+  await carregarContatosEnviados()
   setInterval(() => publicarEstado({ status: estadoAtual() }), INTERVALO_PULSO_MS)
   consultarFilaDeComandos()
   await conectar()
