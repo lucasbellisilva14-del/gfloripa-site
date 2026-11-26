@@ -9,20 +9,31 @@ type Msg = { role: 'user' | 'assistant'; content: string }
 const WELCOME =
   'Oi! Eu sou a Laís, assistente da Nagamboa Imóveis. 👋 Posso te ajudar a encontrar casas, apartamentos e terrenos em Garopaba e na Praia da Gamboa. O que você procura?'
 
-// Converte /imovel/XXX e URLs em links clicáveis
+// Converte /imovel/XXX, /empreendimento/XXX e URLs em links clicáveis e
+// **trecho** em negrito
 function renderContent(text: string) {
-  const parts = text.split(/((?:https?:\/\/[^\s)]+)|(?:\/imovel\/[A-Za-z0-9]+))/g)
+  const parts = text.split(/((?:https?:\/\/[^\s)]+)|(?:\/imovel\/[A-Za-z0-9]+)|(?:\/empreendimento\/[A-Za-z0-9]+)|(?:\*\*[^*\n]+\*\*))/g)
   return parts.map((part, i) => {
-    if (/^https?:\/\//.test(part) || /^\/imovel\//.test(part)) {
+    if (/^\*\*[^*]+\*\*$/.test(part)) {
+      return <strong key={i} style={{ fontWeight: 600 }}>{part.slice(2, -2)}</strong>
+    }
+    if (/^https?:\/\//.test(part) || /^\/(imovel|empreendimento)\//.test(part)) {
+      const rotulo = part.startsWith('/imovel/')
+        ? `ver imóvel ${part.split('/').pop()}`
+        : part.startsWith('/empreendimento/')
+          ? 'ver empreendimento'
+          : part
       return (
         <a key={i} href={part} target={part.startsWith('http') ? '_blank' : undefined} rel="noopener noreferrer" style={{ color: '#E8B23A', textDecoration: 'underline' }}>
-          {part.startsWith('/imovel/') ? `ver imóvel ${part.split('/').pop()}` : part}
+          {rotulo}
         </a>
       )
     }
     return <span key={i}>{part}</span>
   })
 }
+
+const WHATSAPP_GERAL = '5548984727799'
 
 export default function ChatWidget() {
   // A Lia é do site público; dentro do painel interno (/painel) ela não aparece
@@ -68,27 +79,23 @@ export default function ChatWidget() {
     return () => clearTimeout(t)
   }, [])
 
-  async function send() {
-    const text = input.trim()
-    if (!text || loading) return
-    setInput('')
-    const next: Msg[] = [...msgs, { role: 'user', content: text }]
-    setMsgs(next)
-    setLoading(true)
-    try {
-      const res = await fetch('/api/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next }),
-      })
-      if (!res.ok || !res.body) throw new Error('indisponível')
+  // Uma tentativa de resposta em streaming. Devolve se terminou com 'end'.
+  async function receber(next: Msg[]): Promise<boolean> {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        messages: next,
+        pagina: { path: window.location.pathname, titulo: document.title },
+      }),
+    })
+    if (!res.ok || !res.body) return false
 
-      // Resposta em NDJSON streaming: monta a mensagem da assistente ao vivo
-      setMsgs((m) => [...m, { role: 'assistant', content: '' }])
-      const reader = res.body.getReader()
-      const decoder = new TextDecoder()
-      let buffer = ''
-      let got = false
+    const reader = res.body.getReader()
+    const decoder = new TextDecoder()
+    let buffer = ''
+    let terminou = false
+    try {
       for (;;) {
         const { done, value } = await reader.read()
         if (done) break
@@ -97,7 +104,7 @@ export default function ChatWidget() {
         buffer = lines.pop() ?? ''
         for (const line of lines) {
           if (!line.trim()) continue
-          let ev: { t: string; v?: string; whatsapp?: string | null; corretor?: string | null }
+          let ev: { t: string; v?: string; n?: number; whatsapp?: string | null; corretor?: string | null }
           try {
             ev = JSON.parse(line)
           } catch {
@@ -106,7 +113,6 @@ export default function ChatWidget() {
           if (ev.t === 'busca') {
             setBuscando(true)
           } else if (ev.t === 'd' && ev.v) {
-            got = true
             setBuscando(false)
             setMsgs((m) => {
               const copy = [...m]
@@ -114,26 +120,58 @@ export default function ChatWidget() {
               copy[copy.length - 1] = { ...last, content: last.content + ev.v }
               return copy
             })
+          } else if (ev.t === 'reset' && ev.n) {
+            // o servidor vai refazer a rodada: descarta o trecho parcial
+            const n = ev.n
+            setMsgs((m) => {
+              const copy = [...m]
+              const last = copy[copy.length - 1]
+              copy[copy.length - 1] = { ...last, content: last.content.slice(0, Math.max(0, last.content.length - n)) }
+              return copy
+            })
           } else if (ev.t === 'end') {
+            terminou = true
             if (ev.whatsapp) {
               setWhatsapp(ev.whatsapp)
               trackLead('lia')
             }
             if (ev.corretor) setCorretor(ev.corretor)
           } else if (ev.t === 'err') {
-            throw new Error('erro no servidor')
+            return false
           }
         }
       }
-      if (!got) throw new Error('resposta vazia')
     } catch {
+      // conexão caiu no meio (4G oscilando, navegador interno de app)
+      return false
+    }
+    return terminou
+  }
+
+  async function send() {
+    const text = input.trim()
+    if (!text || loading) return
+    setInput('')
+    const next: Msg[] = [...msgs, { role: 'user', content: text }]
+    setMsgs(next)
+    setLoading(true)
+    try {
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        // cada tentativa recomeça a resposta do zero
+        setMsgs([...next, { role: 'assistant', content: '' }])
+        if (await receber(next)) return
+        await new Promise((r) => setTimeout(r, 900))
+      }
       setMsgs((m) => {
-        const copy = m[m.length - 1]?.role === 'assistant' && m[m.length - 1].content === '' ? m.slice(0, -1) : m
+        const ultima = m[m.length - 1]
+        const base = ultima?.role === 'assistant' && ultima.content.trim() === '' ? m.slice(0, -1) : m
         return [
-          ...copy,
-          { role: 'assistant', content: 'Estou com dificuldade técnica agora. Você pode falar direto com a gente no WhatsApp pelo botão "Fale conosco" ali em cima. 🙏' },
+          ...base,
+          { role: 'assistant', content: `Minha conexão oscilou e não consegui terminar. Pode mandar de novo? Se preferir, fale direto com a nossa equipe no WhatsApp: https://wa.me/${WHATSAPP_GERAL}` },
         ]
       })
+    } catch {
+      setMsgs((m) => [...m, { role: 'assistant', content: `Minha conexão oscilou. Pode mandar de novo? Ou fale com a equipe no WhatsApp: https://wa.me/${WHATSAPP_GERAL}` }])
     } finally {
       setLoading(false)
       setBuscando(false)
