@@ -136,7 +136,6 @@ function slimProperty(p: Property): Property {
 }
 
 async function fetchAllProperties(): Promise<Property[]> {
-  if (semJetimobNoBuild()) return []
   const first = await getProperties({ page: 1, pageSize: 500 })
   const all = [...(first.data ?? [])]
   let page = first.page
@@ -153,11 +152,13 @@ async function fetchAllProperties(): Promise<Property[]> {
 let memCache: { data: Property[]; at: number } | null = null
 const MEM_TTL_MS = 10 * 60 * 1000
 
-const getAllPropertiesCached = unstable_cache(fetchAllProperties, ['jetimob-all-properties'], {
+const getAllPropertiesCached = unstable_cache(fetchAllProperties, ['jetimob-all-properties-v2'], {
   revalidate: 600,
 })
 
 export async function getAllProperties(): Promise<Property[]> {
+  // fora do cache: o vazio do build não pode ficar guardado para a execução
+  if (semJetimobNoBuild()) return []
   if (memCache && Date.now() - memCache.at < MEM_TTL_MS) return memCache.data
   const data = await getAllPropertiesCached()
   memCache = { data, at: Date.now() }
@@ -182,17 +183,21 @@ export async function getProperty(code: string): Promise<Property | null> {
   return property && property.codigo ? property : null
 }
 
-export const getCondominios = unstable_cache(
+const getCondominiosCached = unstable_cache(
   async (): Promise<Condominio[]> => {
-    if (semJetimobNoBuild()) return []
     const res = await fetch(buildUrl('/condominios?v=6&pageSize=500'))
     if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
     const body = await res.json()
     return body?.data ?? body ?? []
   },
-  ['jetimob-condominios'],
+  ['jetimob-condominios-v2'],
   { revalidate: 600 }
 )
+
+export async function getCondominios(): Promise<Condominio[]> {
+  if (semJetimobNoBuild()) return [] // fora do cache, ver getAllProperties
+  return getCondominiosCached()
+}
 
 // Empreendimentos para a vitrine: em lançamento, na planta ou em construção,
 // com unidades disponíveis. Lançamentos e "na planta" primeiro.
@@ -256,16 +261,21 @@ export async function getCondominioByCodigo(codigo: string): Promise<Condominio 
   return todos.find((c) => String(c.codigo) === codigo || String(c.id_condominio) === codigo) ?? null
 }
 
-export const getCorretores = unstable_cache(
+const getCorretoresCached = unstable_cache(
   async (): Promise<Corretor[]> => {
-    if (semJetimobNoBuild()) return []
     const res = await fetch(buildUrl('/corretores'))
     if (!res.ok) throw new Error(`Jetimob API error: ${res.status}`)
     return res.json()
   },
-  ['jetimob-corretores'],
+  // chave nova: descarta a lista vazia que o build de 25/11 deixou em cache
+  ['jetimob-corretores-v2'],
   { revalidate: 3600 }
 )
+
+export async function getCorretores(): Promise<Corretor[]> {
+  if (semJetimobNoBuild()) return [] // fora do cache, ver getAllProperties
+  return getCorretoresCached()
+}
 
 export async function getCorretorById(id: number | null): Promise<Corretor | null> {
   if (!id) return null
