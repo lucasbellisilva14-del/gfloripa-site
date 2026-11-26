@@ -199,6 +199,10 @@ export function getDb(): Promise<PainelDb> {
 
 // Utilidades compartilhadas pelos adaptadores -------------------------------
 
+// A tela do WhatsApp mostra as conversas mais recentes; acima disso, a lista
+// só pesaria a cada atualização (ela é consultada a cada 20 s com a tela aberta).
+export const LIMITE_LISTA_CHATS = 150
+
 export function agoraIso(): string {
   return new Date().toISOString()
 }

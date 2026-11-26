@@ -14,8 +14,13 @@ export function ehConversaDePessoa(jid) {
   if (jid.endsWith('@g.us')) return false // grupo
   if (jid.endsWith('@newsletter')) return false // canal
   if (jid.includes('broadcast')) return false // status e lista de transmissão
+  if (jid.endsWith('@bot')) return false // conversa com a Meta AI
   return true
 }
+
+// Teto de texto por mensagem. A análise não precisa de mais que isso, e um
+// texto colado enorme (contrato, lista de imóveis) não deve viajar inteiro.
+export const MAX_TEXTO = 4000
 
 // Os dois tipos que interessam:
 //   notify  mensagem que chega com o serviço no ar
@@ -74,8 +79,9 @@ export function nomeDaConversa(m, nomeContato) {
 export function prepararMensagem(m, { janelaDias = JANELA_DIAS_PADRAO, agora = Date.now(), nomeContato = null } = {}) {
   const jid = m?.key?.remoteJid
   if (!ehConversaDePessoa(jid)) return { recusa: 'nao e conversa de pessoa' }
-  const texto = textoDaMensagem(m)
-  if (!texto) return { recusa: 'sem texto' }
+  const bruto = textoDaMensagem(m)
+  if (!bruto) return { recusa: 'sem texto' }
+  const texto = bruto.length > MAX_TEXTO ? `${bruto.slice(0, MAX_TEXTO)} [...]` : bruto
   const ms = carimboParaMs(m.messageTimestamp)
   if (!dentroDaJanela(ms, janelaDias, agora)) return { recusa: 'fora da janela de dias' }
   if (!m.key?.id) return { recusa: 'sem id' }

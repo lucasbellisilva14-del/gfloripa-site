@@ -3,7 +3,7 @@
 // Usa a service role key: esta camada só roda no servidor, atrás do login.
 
 import type { PainelDb, PatchEstadoWhatsapp } from './db'
-import { normalizarTelefone, ordenarClientes } from './db'
+import { LIMITE_LISTA_CHATS, normalizarTelefone, ordenarClientes } from './db'
 import type { Analise, ChatWhatsapp, Cliente, ComandoWhatsapp, Conversa, Corretor, EstadoWhatsapp, ImovelInteresse, Lembrete, MensagemRecebida, MensagemWhatsapp } from './tipos'
 
 type Linha = Record<string, unknown>
@@ -331,6 +331,8 @@ export function criarDbSupabase(): PainelDb {
           chat = criados[0]
         }
         if (!chat) continue
+        // arquivada = ignorada: contato pessoal não ocupa banco nem análise
+        if (chat.arquivado) continue
         // ignore-duplicates: mensagem repetida (mesmo wa_id) não é inserida de novo
         const inseridas = await rest<MensagemWhatsapp[]>('whatsapp_mensagens', {
           method: 'POST',
@@ -392,7 +394,7 @@ export function criarDbSupabase(): PainelDb {
     async listarChatsWhatsapp(corretorId, incluirArquivados = false) {
       const filtro = incluirArquivados ? '' : '&arquivado=is.false'
       return rest<ChatWhatsapp[]>('whatsapp_chats', {
-        query: `select=*&corretor_id=eq.${q(corretorId)}${filtro}&order=ultima_mensagem_em.desc.nullslast`,
+        query: `select=*&corretor_id=eq.${q(corretorId)}${filtro}&order=ultima_mensagem_em.desc.nullslast&limit=${LIMITE_LISTA_CHATS}`,
       })
     },
     async obterChatWhatsapp(id) {

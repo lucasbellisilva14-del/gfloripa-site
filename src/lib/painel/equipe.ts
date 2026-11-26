@@ -5,6 +5,7 @@
 
 import type { PainelDb } from './db'
 import type { Analise, Cliente, Corretor, Estagio, StatusWhatsapp } from './tipos'
+import { LIMITE_SEM_PULSO_MS } from './whatsapp-situacao'
 import { ESTAGIOS } from './tipos'
 import { classificarLembrete } from './formato'
 
@@ -164,7 +165,7 @@ export async function montarVisaoEquipe(db: PainelDb, agora = new Date()): Promi
     return {
       corretor,
       whatsapp: temPonte
-        ? { status: estadoWa?.status ?? 'desconectado', vivo: Boolean(estadoWa?.atualizado_em) && agora.getTime() - Date.parse(estadoWa!.atualizado_em) < 95_000 }
+        ? { status: estadoWa?.status ?? 'desconectado', vivo: Boolean(estadoWa?.atualizado_em) && agora.getTime() - Date.parse(estadoWa!.atualizado_em) < LIMITE_SEM_PULSO_MS }
         : null,
       clientes: meus.length,
       quentes: meus.filter(ehQuente).length,

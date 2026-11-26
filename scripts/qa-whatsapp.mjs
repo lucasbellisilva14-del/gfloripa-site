@@ -124,6 +124,9 @@ ok(r.ok, 'arquivar conversa')
 r = await fetch(`${BASE}/api/painel/whatsapp/chat`, { headers: { cookie } })
 b = await r.json()
 ok(!(b.chats ?? []).some((c) => c.wa_chat_id === chat), 'conversa arquivada sai da lista')
+r = await ponte('entrada', { method: 'POST', body: JSON.stringify({ mensagens: [msg(20, 'entrada', 'mensagem depois de arquivar')] }) })
+b = await r.json()
+ok(b.novas === 0, `conversa arquivada não guarda mensagem nova (novas=${b.novas})`)
 
 // 9. nome da conversa nunca é o do corretor; agenda e Renomear corrigem
 const chat2 = `55549${String(Date.now() + 7).slice(-7)}@s.whatsapp.net`
